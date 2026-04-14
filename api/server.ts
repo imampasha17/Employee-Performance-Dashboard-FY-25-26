@@ -111,7 +111,14 @@ async function createServer() {
   };
 
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", mode: "supabase", time: new Date().toISOString() });
+    res.json({ 
+      status: "ok", 
+      mode: "supabase", 
+      hasUrl: !!SUPABASE_URL,
+      hasKey: !!SUPABASE_SERVICE_ROLE_KEY,
+      urlPrefix: SUPABASE_URL ? SUPABASE_URL.substring(0, 15) : "none",
+      time: new Date().toISOString() 
+    });
   });
 
   app.post("/api/login", async (req, res) => {
@@ -123,10 +130,15 @@ async function createServer() {
         .eq('email', email)
         .single();
 
-      if (error || !user) return res.status(401).json({ message: "Invalid credentials" });
+      if (error) {
+        console.error("Supabase Login Fetch Error:", error);
+        return res.status(500).json({ message: `Database error: ${error.message}` });
+      }
+      
+      if (!user) return res.status(401).json({ message: "Invalid credentials (User not found)" });
 
       const isMatch = bcrypt.compareSync(password, user.password);
-      if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
+      if (!isMatch) return res.status(401).json({ message: "Invalid credentials (Password mismatch)" });
 
       const token = jwt.sign({ 
         id: user.id, 
@@ -146,7 +158,8 @@ async function createServer() {
         } 
       });
     } catch (err: any) {
-      res.status(500).json({ message: "Internal server error" });
+      console.error("Login catch error:", err);
+      res.status(500).json({ message: `Internal server error: ${err.message}` });
     }
   });
 
