@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { motion, AnimatePresence } from 'motion/react';
 import { Users, UserPlus, MapPin, Save, X, Shield, Mail, User as UserIcon, Check, Plus, Edit2, Trash2, Key, AlertCircle } from 'lucide-react';
 import { User } from '../../types';
+import { cn } from '../../lib/utils';
 
 export function AdminPanel({ onDataUpdate }: { onDataUpdate: () => void }) {
   const { token, user: currentUser } = useAuth();
@@ -247,7 +248,7 @@ export function AdminPanel({ onDataUpdate }: { onDataUpdate: () => void }) {
 
                   <div className="flex items-center gap-2 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                     <button
-                      onClick={() => setEditingUser({ ...user, password: '' })}
+                      onClick={() => setEditingUser({ ...user, password: undefined })}
                       className="flex-1 lg:flex-none p-3 bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all flex items-center justify-center"
                       title="Edit User"
                     >
@@ -452,18 +453,43 @@ export function AdminPanel({ onDataUpdate }: { onDataUpdate: () => void }) {
                       onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                      <Key className="w-3 h-3" />
-                      New Password (leave blank to keep current)
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-medium"
-                      placeholder="••••••••"
-                      value={editingUser.password}
-                      onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
-                    />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <Key className="w-3 h-3" />
+                        Credentials
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const willUpdate = !editingUser.password;
+                          setEditingUser({ ...editingUser, password: willUpdate ? ' ' : undefined });
+                        }}
+                        className={cn(
+                          "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg transition-all",
+                          editingUser.password !== undefined ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+                        )}
+                      >
+                        {editingUser.password !== undefined ? "Cancel Password Change" : "Change Password"}
+                      </button>
+                    </div>
+                    {editingUser.password !== undefined && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="space-y-2"
+                      >
+                        <input
+                          type="password"
+                          required
+                          className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-medium"
+                          placeholder="Enter new password"
+                          value={editingUser.password.trim()}
+                          onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
+                        />
+                        <p className="text-[10px] font-bold text-slate-400 ml-1 italic">Type at least 6 characters for security.</p>
+                      </motion.div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">User Role</label>

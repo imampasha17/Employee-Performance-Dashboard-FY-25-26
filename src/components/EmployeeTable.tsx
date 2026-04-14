@@ -64,15 +64,19 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[980px]">
-          <div className="grid grid-cols-[minmax(240px,1.6fr)_120px_110px_110px_110px_110px_120px_36px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+        <div className="min-w-[1300px]">
+          <div className="grid grid-cols-[minmax(200px,1fr)_100px_80px_100px_80px_80px_80px_100px_100px_80px_100px_36px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest">
             <div>Employee</div>
             <div>Location</div>
-            <div>Enrolments</div>
-            <div>Enrolment Customers</div>
-            <div>Collection Customers</div>
-            <div>Due Customers</div>
-            <div>Total Due</div>
+            <div className="text-right">Enrols</div>
+            <div className="text-right">Enrol Val</div>
+            <div className="text-right">En Cust</div>
+            <div className="text-right">Col Cust</div>
+            <div className="text-right">Due Cust</div>
+            <div className="text-right">Collection</div>
+            <div className="text-right">Total Due</div>
+            <div className="text-right">Re-Enrol</div>
+            <div className="text-right">Re-Enrol Val</div>
             <div />
           </div>
 
@@ -89,7 +93,7 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
                       exit={{ opacity: 0 }}
                       key={`${employee.location}-${employee.employeeCode}`}
                       onClick={() => onEmployeeClick?.(employee)}
-                      className="w-full text-left px-4 py-3 bg-white hover:bg-blue-50/40 transition-colors group grid grid-cols-[minmax(240px,1.6fr)_120px_110px_110px_110px_110px_120px_36px] gap-3 items-center"
+                      className="w-full text-left px-4 py-3 bg-white hover:bg-blue-50/40 transition-colors group grid grid-cols-[minmax(200px,1fr)_100px_80px_100px_80px_80px_80px_100px_100px_80px_100px_36px] gap-3 items-center"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={cn(
@@ -106,11 +110,15 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
                         </div>
                       </div>
                       <RowValue value={employee.location} />
-                      <RowValue value={formatNumber(employee.totalCount)} />
-                      <RowValue value={formatNumber(employee.enrolmentCustomerCount)} />
-                      <RowValue value={formatNumber(employee.collectionCustomerCount)} />
-                      <RowValue value={formatNumber(employee.dueCustomerCount)} tone="rose" />
-                      <RowValue value={formatCurrency(employee.totalDue)} tone="rose" />
+                      <RowValue value={formatNumber(employee.totalCount)} align="right" />
+                      <RowValue value={formatCurrency(employee.totalAmount)} align="right" />
+                      <RowValue value={formatNumber(employee.enrolmentCustomerCount)} align="right" />
+                      <RowValue value={formatNumber(employee.collectionCustomerCount)} align="right" />
+                      <RowValue value={formatNumber(employee.dueCustomerCount)} tone="rose" align="right" />
+                      <RowValue value={formatCurrency(employee.totalCollection)} tone="emerald" align="right" />
+                      <RowValue value={formatCurrency(employee.totalDue)} tone="rose" align="right" />
+                      <RowValue value={formatNumber(employee.reEnrolmentCount)} tone="emerald" align="right" />
+                      <RowValue value={formatCurrency(employee.reEnrolmentValue)} tone="emerald" align="right" />
                       <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500" />
                     </motion.button>
                   );
@@ -137,9 +145,13 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
   );
 }
 
-function RowValue({ value, tone }: { value: string; tone?: "rose" }) {
+function RowValue({ value, tone, align }: { value: string; tone?: "rose" | "emerald"; align?: "right" }) {
   return (
-    <div className={cn("text-xs font-black truncate", tone === "rose" ? "text-rose-600" : "text-slate-800")}>
+    <div className={cn(
+      "text-xs font-black truncate", 
+      tone === "rose" ? "text-rose-600" : tone === "emerald" ? "text-emerald-600" : "text-slate-800",
+      align === "right" ? "text-right" : "text-left"
+    )}>
       {value}
     </div>
   );

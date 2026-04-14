@@ -74,7 +74,7 @@ interface DetailDashboardProps {
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
-type Tab = "overview" | "enrollment" | "collection";
+type Tab = "overview" | "enrollment" | "collection" | "re-enrollment";
 type SortKey = "customerName" | "installmentAmount" | "totalDue" | "collectionReceivedValue" | "schemeType";
 type SortDir = "asc" | "desc";
 
@@ -89,6 +89,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
   const customers = data.customers || [];
   const enrolmentCustomers = customers.filter(c => c.source === "enrollment" || c.enrolmentCount > 0);
   const collectionCustomers = customers.filter(c => c.source !== "enrollment");
+  const reEnrolmentCustomers = customers.filter(c => c.reEnrolmentCount > 0);
 
   // Unique customers by profile/name
   const uniqueCustomerIds = new Set(customers.map(c => c.profileNo || c.customerName || c.id).filter(Boolean));
@@ -221,7 +222,8 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
   const tabs: { id: Tab; label: string; count: number; icon: any; color: string }[] = [
     { id: "overview", label: "Overview", count: 0, icon: BarChart3, color: "blue" },
     { id: "enrollment", label: "Enrollment", count: enrolmentCustomers.length, icon: BookOpen, color: "emerald" },
-    { id: "collection", label: "Collection", count: collectionCustomers.length, icon: Wallet, color: "amber" },
+    { id: "collection", label: "Collection / Due", count: collectionCustomers.length, icon: Wallet, color: "amber" },
+    { id: "re-enrollment", label: "Re-Enrollment", count: reEnrolmentCustomers.length, icon: RefreshCw, color: "cyan" },
   ];
 
   return (
@@ -281,13 +283,19 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                       onClick={() => downloadCSV(enrolmentCustomers, `${data.name}-enrolments.csv`)}
                       className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
                     >
-                      <Download className="w-3.5 h-3.5" /> Enrollments
+                      <Download className="w-3.5 h-3.5" /> Enrols
                     </button>
                     <button
                       onClick={() => downloadCSV(collectionCustomers, `${data.name}-collections.csv`)}
                       className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors"
                     >
                       <Download className="w-3.5 h-3.5" /> Collections
+                    </button>
+                    <button
+                      onClick={() => downloadCSV(reEnrolmentCustomers, `${data.name}-re-enrolments.csv`)}
+                      className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-cyan-50 text-cyan-600 rounded-xl hover:bg-cyan-100 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Re-Enrols
                     </button>
                   </div>
                 </div>
@@ -675,6 +683,110 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                       </div>
                       <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         Showing {filterCustomers(collectionCustomers).length} of {collectionCustomers.length} collection records • Scroll right to see all columns
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === "re-enrollment" && (
+                  <motion.div
+                    key="re-enrollment"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-4"
+                  >
+                    {/* Summary banner */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-cyan-50 rounded-xl p-3 text-center border border-cyan-100">
+                        <div className="text-xl font-black text-cyan-700">{reEnrolmentCustomers.length}</div>
+                        <div className="text-[10px] font-bold text-cyan-500 uppercase tracking-wider">Total Records</div>
+                      </div>
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
+                        <div className="text-xl font-black text-emerald-700">{formatCurrency(reEnrolmentCustomers.reduce((s, c) => s + (c.reEnrolmentValue || 0), 0))}</div>
+                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Total Re-Enrol Val</div>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
+                        <div className="text-xl font-black text-blue-700">{formatCurrency(reEnrolmentCustomers.reduce((s, c) => s + (c.installmentAmount || 0), 0))}</div>
+                        <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Inst. Amount</div>
+                      </div>
+                      <div className="bg-violet-50 rounded-xl p-3 text-center border border-violet-100">
+                        <div className="text-xl font-black text-violet-700">{new Set(reEnrolmentCustomers.map(c => c.profileNo || c.customerName).filter(Boolean)).size}</div>
+                        <div className="text-[10px] font-bold text-violet-500 uppercase tracking-wider">Unique Customers</div>
+                      </div>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search by customer name, profile, scheme..."
+                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Re-Enrolment Table */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full" style={{ minWidth: '1300px' }}>
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100">
+                              <th className="sticky left-0 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10">#</th>
+                              <th className="sticky left-8 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10 min-w-[160px]">Customer Name</th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Profile No</th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Order No</th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Type</th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Status</th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Re-Enrol Count</th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Re-Enrol Value</th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Inst. Amount</th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Location</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {(() => {
+                              const rows = sortCustomers(filterCustomers(reEnrolmentCustomers));
+                              if (!rows.length) return (
+                                <tr><td colSpan={10} className="px-6 py-10 text-center text-sm text-slate-400 font-medium">
+                                  {search ? `No re-enrollment records matching "${search}"` : "No re-enrollment data available"}
+                                </td></tr>
+                              );
+                              return rows.map((c, i) => (
+                                <tr key={c.id || i} className="hover:bg-cyan-50/20 transition-colors group">
+                                  <td className="sticky left-0 bg-white group-hover:bg-cyan-50/20 px-3 py-2.5 text-[10px] font-bold text-slate-400 z-10">{i + 1}</td>
+                                  <td className="sticky left-8 bg-white group-hover:bg-cyan-50/20 px-3 py-2.5 z-10 min-w-[160px]">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-md bg-cyan-100 text-cyan-600 flex items-center justify-center text-[9px] font-black flex-shrink-0">
+                                        {(c.customerName || "?").charAt(0).toUpperCase()}
+                                      </div>
+                                      <span className="text-[11px] font-black text-slate-800">{c.customerName || "—"}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">{c.profileNo || "—"}</td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-500 whitespace-nowrap">{c.orderNo || "—"}</td>
+                                  <td className="px-3 py-2.5">
+                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wide whitespace-nowrap">{c.schemeType || "—"}</span>
+                                  </td>
+                                  <td className="px-3 py-2.5">
+                                    <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide whitespace-nowrap",
+                                      c.schemeStatus?.toLowerCase().includes("active") ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                                    )}>{c.schemeStatus || "—"}</span>
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-black text-slate-800 text-right whitespace-nowrap">{formatNumber(c.reEnrolmentCount || 0)}</td>
+                                  <td className="px-3 py-2.5 text-[11px] font-black text-emerald-700 text-right whitespace-nowrap">{formatCurrency(c.reEnrolmentValue || 0)}</td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">{formatCurrency(c.installmentAmount || 0)}</td>
+                                  <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">{c.location || "—"}</td>
+                                </tr>
+                              ));
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Showing {filterCustomers(reEnrolmentCustomers).length} of {reEnrolmentCustomers.length} re-enrollment records
                       </div>
                     </div>
                   </motion.div>

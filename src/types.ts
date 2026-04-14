@@ -56,6 +56,12 @@ export interface EmployeeStat {
   totalOverdue: number;
   totalCollection: number;
   totalForclosed: number;
+  totalDue: number;
+  reEnrolmentCount: number;
+  reEnrolmentValue: number;
+  enrolmentCustomerCount: number;
+  collectionCustomerCount: number;
+  dueCustomerCount: number;
 }
 
 export interface User {
