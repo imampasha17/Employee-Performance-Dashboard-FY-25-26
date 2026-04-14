@@ -10,8 +10,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL?.trim();
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
 let supabase: any;
 
@@ -83,6 +83,12 @@ async function createServer() {
   app.use((req, res, next) => {
     console.log(`${req.method} ${req.url}`);
     next();
+  });
+
+  // Global Error Handler
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error("Global express error:", err);
+    res.status(500).json({ message: "Global Server Error", error: err.message || JSON.stringify(err) });
   });
 
   const authenticate = async (req: any, res: any, next: any) => {

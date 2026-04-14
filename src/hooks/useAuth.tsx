@@ -67,10 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         errorMessage = error.message || errorMessage;
       } catch (e) {
         try {
-          const text = await res.text();
-          errorMessage = `Server Error (${res.status}): ${text.substring(0, 100)}`;
+          const text = await res.clone().text(); // Use clone to allow multiple reads
+          errorMessage = `Server Raw Response (${res.status}): ${text.substring(0, 150)}`;
         } catch (textErr) {
-          errorMessage = `Server Error (${res.status})`;
+          errorMessage = `Server Error (${res.status}) - Could not read response body`;
         }
       }
       throw new Error(errorMessage);
