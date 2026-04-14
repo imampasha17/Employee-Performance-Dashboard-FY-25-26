@@ -356,11 +356,23 @@ async function createServer() {
 
   app.get("/api/data", authenticate, async (req: any, res) => {
     try {
-      const { db, collection, getDocs, orderBy, query } = await getFirebase();
-      const globalRef = collection(db, "global_data");
+      const { db, collection, getDocs, orderBy, query, where, doc, getDoc } = await getFirebase();
       
-      // Crucial: Sort by index to prevent data scrambling (chunk_10 before chunk_2)
-      const q = query(globalRef, orderBy("index", "asc"));
+      // 1. Get the pointer to the latest successful upload
+      const metaRef = doc(db, "metadata", "latest_upload");
+      const metaSnap = await getDoc(metaRef);
+      const latestUploadId = metaSnap.exists() ? metaSnap.data().uploadId : null;
+
+      if (!latestUploadId) {
+        console.log("No latest upload found in metadata.");
+        return res.json({ data: [] });
+      }
+
+      console.log(`Fetching data for snapshot: ${latestUploadId}`);
+      
+      const globalRef = collection(db, "global_data");
+      // 2. Query only chunks that belong to this snapshot
+      const q = query(globalRef, where("uploadId", "==", latestUploadId), orderBy("index", "asc"));
       const querySnapshot = await getDocs(q);
       
       let data: any[] = [];
@@ -380,31 +392,25 @@ async function createServer() {
         data = data.filter((item: any) => req.user.accessibleLocations.includes(item.location));
       }
 
-      console.log(`Delivering ${data.length} records to ${req.user.email}`);
+      console.log(`Delivering ${data.length} records to ${req.user.email} from snap ${latestUploadId}`);
       res.json({ data });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Fetch data error:", err);
-      res.status(500).json({ message: "Failed to fetch data" });
+      res.status(500).json({ message: "Failed to fetch data", error: err.message });
     }
   });
 
   app.delete("/api/data", authenticate, async (req: any, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     try {
-      const { db, collection, getDocs, writeBatch } = await getFirebase();
-      const globalRef = collection(db, "global_data");
-      const existingDocs = await getDocs(globalRef);
+      const { db, doc, setDoc, deleteDoc } = await getFirebase();
       
-      const docs = existingDocs.docs;
-      for (let i = 0; i < docs.length; i += 500) {
-        const batch = writeBatch(db);
-        const nextBatch = docs.slice(i, i + 500);
-        nextBatch.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-        console.log(`Cleared batch of ${nextBatch.length} documents`);
-      }
+      // Instant clear by removing the pointer
+      const metaRef = doc(db, "metadata", "latest_upload");
+      await deleteDoc(metaRef);
 
-      res.json({ message: "Data cleared successfully", count: docs.length });
+      console.log("Database 'cleared' by removing latest_upload pointer.");
+      res.json({ message: "Data cleared successfully" });
     } catch (err: any) {
       console.error("Clear data error:", err);
       res.status(500).json({ message: "Failed to clear data", error: err.message });
@@ -462,21 +468,27 @@ async function createServer() {
   app.post("/api/upload-chunk", authenticate, async (req: any, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
 
-    const { data, chunkIndex, isFirstChunk } = req.body;
+    const { data, chunkIndex, uploadId } = req.body;
     
+    if (!uploadId) {
+      return res.status(400).json({ message: "Missing uploadId" });
+    }
+
     try {
       const { db, collection, doc, setDoc } = await getFirebase();
       const globalRef = collection(db, "global_data");
 
-      const newDocRef = doc(globalRef, `chunk_${chunkIndex}`);
+      // Use a unique ID for each chunk in this specific upload session
+      const newDocRef = doc(globalRef, `chunk_${uploadId}_${chunkIndex}`);
       await setDoc(newDocRef, { 
         payload: JSON.stringify(data),
         index: chunkIndex,
+        uploadId: uploadId,
         updatedAt: new Date().toISOString()
       });
       
-      console.log(`Saved chunk ${chunkIndex}. Size: ${data.length} records.`);
-      res.json({ success: true, message: `Chunk ${chunkIndex} saved` });
+      console.log(`Saved snapshot chunk ${uploadId} - ${chunkIndex}. Size: ${data.length} records.`);
+      res.json({ success: true, message: `Chunk ${chunkIndex} of session ${uploadId} saved` });
     } catch (err: any) {
       console.error(`Error saving chunk ${chunkIndex}:`, err);
       const errorCode = err.code || (err.message?.includes("RESOURCE_EXHAUSTED") ? "RESOURCE_EXHAUSTED" : "SERVER_ERROR");
@@ -485,6 +497,30 @@ async function createServer() {
         error: err.message,
         code: errorCode
       });
+    }
+  });
+
+  app.post("/api/finalize-upload", authenticate, async (req: any, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+
+    const { uploadId } = req.body;
+    if (!uploadId) return res.status(400).json({ message: "Missing uploadId" });
+
+    try {
+      const { db, doc, setDoc } = await getFirebase();
+      
+      // Update the pointer to make this upload live
+      const metaRef = doc(db, "metadata", "latest_upload");
+      await setDoc(metaRef, { 
+        uploadId: uploadId,
+        finalizedAt: new Date().toISOString()
+      }, { merge: true });
+
+      console.log(`Upload ${uploadId} is now LIVE.`);
+      res.json({ success: true, message: "Upload finalized" });
+    } catch (err: any) {
+      console.error("Finalization error:", err);
+      res.status(500).json({ message: "Failed to finalize upload", error: err.message });
     }
   });
 

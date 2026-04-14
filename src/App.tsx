@@ -53,21 +53,10 @@ function AppContent() {
       // Upload to server if admin
       if (user?.role === 'admin') {
         setIsUploading(true);
-        setUploadStatus("Clearing existing data on server...");
+        const uploadId = `snap_${Date.now()}`;
+        setUploadStatus("Initializing snapshot upload...");
         
         try {
-          // 1. Clear data first
-          const clearRes = await fetch('/api/data', {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (!clearRes.ok) {
-            const clearErr = await clearRes.json().catch(() => ({}));
-            throw new Error(`Failed to clear old data: ${clearErr.message || 'Server error'}`);
-          }
-
-          // 2. Upload in chunks
           const CHUNK_SIZE = 1000;
           const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
           
@@ -85,7 +74,8 @@ function AppContent() {
               },
               body: JSON.stringify({ 
                 data: chunk, 
-                chunkIndex
+                chunkIndex,
+                uploadId
               })
             });
 
@@ -93,6 +83,21 @@ function AppContent() {
               const errData = await res.json().catch(() => ({}));
               throw new Error(errData.error || errData.message || `Failed to upload part ${chunkIndex + 1}`);
             }
+          }
+
+          setUploadStatus("Finalizing snapshot...");
+          const finalRes = await fetch('/api/finalize-upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ uploadId })
+          });
+
+          if (!finalRes.ok) {
+            const finalErr = await finalRes.json().catch(() => ({}));
+            throw new Error(`Finalization failed: ${finalErr.message || 'Server error'}`);
           }
           
           setUploadStatus("Upload complete!");
