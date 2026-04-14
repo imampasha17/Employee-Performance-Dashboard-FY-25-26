@@ -11,6 +11,8 @@ function AppContent() {
   const [data, setData] = useState<ProcessedData[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!token) return;
@@ -50,27 +52,55 @@ function AppContent() {
 
       // Upload to server if admin
       if (user?.role === 'admin') {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ data: processed })
-        });
-        if (res.ok) {
-          setError(null);
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          if (errData.code === "RESOURCE_EXHAUSTED" || errData.error?.includes("RESOURCE_EXHAUSTED")) {
-            setError("Upload failed: Firebase Quota Exceeded. The data is visible locally but NOT saved for other users. Please try again tomorrow or upgrade your plan.");
-          } else {
-            setError(`Upload failed: ${errData.error || errData.message || 'Saving to the server failed'}. Data is only visible locally.`);
+        setIsUploading(true);
+        setUploadStatus("Preparing data for upload...");
+        
+        try {
+          const CHUNK_SIZE = 2000;
+          const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
+          
+          for (let i = 0; i < processed.length; i += CHUNK_SIZE) {
+            const chunk = processed.slice(i, i + CHUNK_SIZE);
+            const chunkIndex = i / CHUNK_SIZE;
+            const isFirstChunk = i === 0;
+            
+            setUploadStatus(`Uploading part ${chunkIndex + 1} of ${totalChunks}... (${processed.length} total records)`);
+            
+            const res = await fetch('/api/upload-chunk', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ 
+                data: chunk, 
+                chunkIndex, 
+                isFirstChunk 
+              })
+            });
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.error || errData.message || `Failed to upload part ${chunkIndex + 1}`);
+            }
           }
+          
+          setUploadStatus("Upload complete!");
+          setError(null);
+          setTimeout(() => {
+            setIsUploading(false);
+            setUploadStatus(null);
+          }, 3000);
+        } catch (uploadErr: any) {
+          console.error("Chunked upload failed:", uploadErr);
+          if (uploadErr.message?.includes("RESOURCE_EXHAUSTED")) {
+            setError("Upload failed: Firebase Quota Exceeded. The data is visible locally but NOT saved for other users. Please try again tomorrow.");
+          } else {
+            setError(`Upload failed: ${uploadErr.message}. Data is only visible locally.`);
+          }
+          setIsUploading(false);
+          setUploadStatus(null);
         }
-      } else {
-        // Non-admins shouldn't see upload UI, but handle just in case
-        setError(null);
       }
     } catch (err) {
       setError("Error parsing the file.");
@@ -137,6 +167,8 @@ function AppContent() {
             onRefresh={fetchData}
             error={error}
             setError={setError}
+            uploadStatus={uploadStatus}
+            isUploading={isUploading}
           />
         </motion.div>
       )}

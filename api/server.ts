@@ -454,6 +454,48 @@ async function createServer() {
     }
   });
 
+  app.post("/api/upload-chunk", authenticate, async (req: any, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+
+    const { data, chunkIndex, isFirstChunk } = req.body;
+    
+    try {
+      const { db, collection, doc, setDoc, getDocs, writeBatch } = await getFirebase();
+      const globalRef = collection(db, "global_data");
+
+      if (isFirstChunk) {
+        console.log("First chunk received. Clearing old data...");
+        const existingDocs = await getDocs(globalRef);
+        const docs = existingDocs.docs;
+        for (let i = 0; i < docs.length; i += 500) {
+          const batch = writeBatch(db);
+          const nextBatch = docs.slice(i, i + 500);
+          nextBatch.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+        console.log(`Cleared ${docs.length} old documents.`);
+      }
+
+      const newDocRef = doc(globalRef, `chunk_${chunkIndex}`);
+      await setDoc(newDocRef, { 
+        payload: JSON.stringify(data),
+        index: chunkIndex,
+        updatedAt: new Date().toISOString()
+      });
+      
+      console.log(`Saved chunk ${chunkIndex}. Size: ${data.length} records.`);
+      res.json({ success: true, message: `Chunk ${chunkIndex} saved` });
+    } catch (err: any) {
+      console.error(`Error saving chunk ${chunkIndex}:`, err);
+      const errorCode = err.code || (err.message?.includes("RESOURCE_EXHAUSTED") ? "RESOURCE_EXHAUSTED" : "SERVER_ERROR");
+      res.status(500).json({ 
+        message: `Failed to save chunk ${chunkIndex}`, 
+        error: err.message,
+        code: errorCode
+      });
+    }
+  });
+
   app.get("/api/users", authenticate, async (req: any, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     

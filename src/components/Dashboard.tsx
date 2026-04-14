@@ -23,9 +23,13 @@ interface DashboardProps {
   onRefresh: () => void;
   error?: string | null;
   setError?: (err: string | null) => void;
+  uploadStatus?: string | null;
+  isUploading?: boolean;
 }
 
-export function Dashboard({ data, onFileUpload, onClearData, user, onLogout, onRefresh, error, setError }: DashboardProps) {
+export function Dashboard({ 
+  data, onFileUpload, onClearData, user, onLogout, onRefresh, error, setError, uploadStatus, isUploading 
+}: DashboardProps) {
   const { token } = useAuth();
   const [detailData, setDetailData] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -372,6 +376,30 @@ export function Dashboard({ data, onFileUpload, onClearData, user, onLogout, onR
               <button onClick={() => setError?.(null)} className="ml-auto text-red-400 hover:text-red-600">
                 <X className="w-5 h-5" />
               </button>
+            </motion.div>
+          )}
+
+          {isUploading && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-4 text-blue-700 shadow-sm"
+            >
+              <div className="bg-blue-100 p-2 rounded-xl">
+                <div className="w-5 h-5 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+              </div>
+              <div>
+                <p className="text-sm font-black tracking-tight">{uploadStatus || 'Uploading data...'}</p>
+                <div className="mt-1 h-1.5 w-48 bg-blue-200 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-blue-600"
+                    initial={{ width: "0%" }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 10, repeat: Infinity }}
+                  />
+                </div>
+              </div>
             </motion.div>
           )}
 
