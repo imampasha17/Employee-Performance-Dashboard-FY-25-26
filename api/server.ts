@@ -88,25 +88,25 @@ async function getFirebase() {
     const config = loadConfig();
     console.log("Initializing Firebase for project:", config.projectId);
     
-    // Simple initialization
     firebaseApp = getApps().length > 0 ? getApp() : initializeApp(config);
     
-    // Initialize Firestore with explicit databaseId support
     if (config.firestoreDatabaseId && config.firestoreDatabaseId !== "(default)") {
-      // For Client SDK, we often just use the default database unless configured
-      // If the user has a specific DB, initializeFirestore is needed
-      const { initializeFirestore } = await import("firebase/firestore");
-      db = initializeFirestore(firebaseApp, {
-        experimentalForceLongPolling: true,
-      }, config.firestoreDatabaseId);
+      // Use the standard getFirestore but with settings if needed
+      db = getFirestore(firebaseApp, config.firestoreDatabaseId);
     } else {
       db = getFirestore(firebaseApp);
     }
-    
-    console.log("Firebase stabilized connection established");
   }
   return { db };
 }
+
+// Utility for operation timeouts
+const withTimeout = (promise: Promise<any>, ms: number, label: string) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Operation Timeout: ${label}`)), ms))
+  ]);
+};
 
 // No longer needed: we rely on JWT for dashboard security 
 // and the database is currently configured to allow the server.
@@ -384,12 +384,12 @@ async function createServer() {
       const globalRef = collection(db, "global_data");
       const chunkDocRef = doc(globalRef, `chunk_${uploadId}_${chunkIndex}`);
       
-      await setDoc(chunkDocRef, { 
+      await withTimeout(setDoc(chunkDocRef, { 
         payload: JSON.stringify(data),
         index: chunkIndex,
         uploadId: uploadId,
         updatedAt: new Date().toISOString()
-      });
+      }), 12000, `Upload Chunk ${chunkIndex}`); // 12s timeout for setDoc
       
       res.json({ success: true, message: `Chunk ${chunkIndex} saved` });
     } catch (err: any) {

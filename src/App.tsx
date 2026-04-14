@@ -53,18 +53,18 @@ function AppContent() {
       // Upload to server if admin
       if (user?.role === 'admin') {
         setIsUploading(true);
-        const uploadId = `snap_${Date.now()}`;
+        const uploadId = `snap_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         setUploadStatus("Initializing snapshot upload...");
         
         try {
-          const CHUNK_SIZE = 1000;
+          // Use a smaller chunk size to stay safely within Firestore 1MB limits
+          const CHUNK_SIZE = 400; 
           const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
           
           for (let i = 0; i < processed.length; i += CHUNK_SIZE) {
             const chunk = processed.slice(i, i + CHUNK_SIZE);
             const chunkIndex = i / CHUNK_SIZE;
             
-            // Implementation of a simple retry mechanism
             let attempts = 0;
             const maxAttempts = 3;
             let success = false;
@@ -92,10 +92,13 @@ function AppContent() {
                   throw new Error(errData.error || errData.message || `Failed to upload part ${chunkIndex + 1}`);
                 }
                 success = true;
+                
+                // Add a small delay between chunks to prevent overwhelming the connection
+                await new Promise(r => setTimeout(r, 400));
               } catch (chunkErr: any) {
+                console.error(`Attempt ${attempts} failed for part ${chunkIndex + 1}:`, chunkErr);
                 if (attempts >= maxAttempts) throw chunkErr;
-                console.warn(`Part ${chunkIndex + 1} failed, retrying...`, chunkErr);
-                await new Promise(r => setTimeout(r, 1000 * attempts)); // Exponential-ish backoff
+                await new Promise(r => setTimeout(r, 2000 * attempts)); // Backoff
               }
             }
           }
