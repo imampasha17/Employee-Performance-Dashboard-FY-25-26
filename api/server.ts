@@ -133,7 +133,9 @@ async function restWrite(collectionPath: string, docId: string, data: any) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`REST Write Failed: ${JSON.stringify(err.error || err)}`);
+    console.error(`Firestore REST Error [${res.status}]:`, JSON.stringify(err));
+    const errMsg = (err.error && err.error.message) ? err.error.message : JSON.stringify(err);
+    throw new Error(`DB_ERR_${res.status}: ${errMsg}`);
   }
   return res.json();
 }

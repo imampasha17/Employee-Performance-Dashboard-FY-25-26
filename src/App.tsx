@@ -57,8 +57,8 @@ function AppContent() {
         setUploadStatus("Initializing snapshot upload...");
         
         try {
-          // Use micro-chunks (100 records) for guaranteed Vercel compatibility
-          const CHUNK_SIZE = 100; 
+          // Micro-chunks (50 records) + 1s delay for maximum compatibility with Free/Limited projects
+          const CHUNK_SIZE = 50; 
           const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
           
           for (let i = 0; i < processed.length; i += CHUNK_SIZE) {
@@ -91,14 +91,14 @@ function AppContent() {
                   const errData = await res.json().catch(() => ({}));
                   throw new Error(errData.error || errData.message || `Failed to upload part ${chunkIndex + 1}`);
                 }
-                success = true;
                 
-                // Add a small delay between chunks to prevent overwhelming the connection
-                await new Promise(r => setTimeout(r, 400));
+                success = true;
+                // Use smaller chunk size and larger delay to avoid rate limits
+                await new Promise(r => setTimeout(r, 1000));
               } catch (chunkErr: any) {
                 console.error(`Attempt ${attempts} failed for part ${chunkIndex + 1}:`, chunkErr);
                 if (attempts >= maxAttempts) throw chunkErr;
-                await new Promise(r => setTimeout(r, 2000 * attempts)); // Backoff
+                await new Promise(r => setTimeout(r, 3000 * attempts)); // Backoff
               }
             }
           }
@@ -128,11 +128,15 @@ function AppContent() {
             setUploadStatus(null);
           }, 3000);
         } catch (uploadErr: any) {
-          console.error("Chunked upload failed:", uploadErr);
-          if (uploadErr.message?.includes("RESOURCE_EXHAUSTED")) {
-            setError("Upload failed: Firebase Quota Exceeded. The data is visible locally but NOT saved for other users. Please try again tomorrow.");
+          console.error("Critical upload failure:", uploadErr);
+          const rawMsg = uploadErr.message || "Unknown error";
+          
+          if (rawMsg.includes("RESOURCE_EXHAUSTED")) {
+            setError(`Firebase Limit Hit (RESOURCE_EXHAUSTED): ${rawMsg}. Recommendation: Wait 24 hours or upgrade to a dedicated Firebase project ID.`);
+          } else if (rawMsg.includes("DB_ERR_429")) {
+            setError(`Rate Limit Hit (Too Fast): ${rawMsg}. Slowing down and retrying is recommended.`);
           } else {
-            setError(`Upload failed: ${uploadErr.message}. Data is only visible locally.`);
+            setError(`Upload failed: ${rawMsg}. The data is only saved locally.`);
           }
           setIsUploading(false);
           setUploadStatus(null);
