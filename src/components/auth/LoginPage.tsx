@@ -113,7 +113,7 @@ export function LoginPage() {
         
         <div className="mt-8 text-center">
           <p className="text-sm text-slate-400 font-medium">
-            Admin: admin@example.com / admin123
+            Admin: admin@dashboard.com / admin123
           </p>
         </div>
       </motion.div>

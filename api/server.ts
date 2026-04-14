@@ -214,7 +214,7 @@ async function createServer() {
         odCollectionCount: Number(row.od_collection_count),
         odCollectionValue: Number(row.od_collection_value),
         currentDueCount: Number(row.current_due_count),
-        current_due_value: Number(row.current_due_value),
+        currentDueValue: Number(row.current_due_value),
         cdCollectionCount: Number(row.cd_collection_count),
         cdCollectionValue: Number(row.cd_collection_value),
         forclosedCount: Number(row.forclosed_count),
