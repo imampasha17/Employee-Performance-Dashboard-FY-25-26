@@ -71,32 +71,50 @@ let adminApp: admin.app.App | null = null;
 let adminDb: admin.firestore.Firestore | null = null;
 
 async function getAdminDb() {
-  if (!adminApp) {
-    const config = loadConfig();
-    console.log("Initializing Firebase Admin for project:", config.projectId);
-    
-    // Check for service account in env or config
-    const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (serviceAccountVar) {
-      const sa = JSON.parse(serviceAccountVar);
-      adminApp = admin.initializeApp({
-        credential: admin.credential.cert(sa),
-        databaseId: config.firestoreDatabaseId || "(default)"
-      });
-    } else {
-      // Fallback to project ID (works in environments with default credentials)
-      adminApp = admin.initializeApp({
-        projectId: config.projectId,
-        databaseId: config.firestoreDatabaseId || "(default)"
-      });
+  try {
+    if (!adminApp) {
+      const config = loadConfig();
+      console.log("Initializing Firebase Admin for project:", config.projectId);
+      
+      const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+      if (serviceAccountVar) {
+        const sa = JSON.parse(serviceAccountVar);
+        adminApp = admin.initializeApp({
+          credential: admin.credential.cert(sa)
+        }, "admin-app");
+      } else {
+        adminApp = admin.initializeApp({
+          projectId: config.projectId
+        }, "admin-app");
+      }
+      
+      console.log("Firebase Admin App initialized");
+    }
+
+    if (!adminDb) {
+      const config = loadConfig();
+      // admin.firestore() can take a database name in some versions, 
+      // but the most compatible way is setting it in the settings
+      adminDb = adminApp.firestore();
+      
+      const firestoreSettings: any = { 
+        ignoreUndefinedProperties: true 
+      };
+      
+      // Only set databaseId if it is not the default one
+      if (config.firestoreDatabaseId && config.firestoreDatabaseId !== "(default)") {
+        firestoreSettings.databaseId = config.firestoreDatabaseId;
+      }
+      
+      adminDb.settings(firestoreSettings);
+      console.log("Firestore Admin initialized with settings");
     }
     
-    adminDb = adminApp.firestore();
-    // Set settings for better performance on Vercel
-    adminDb.settings({ ignoreUndefinedProperties: true });
-    console.log("Firebase Admin initialized successfully");
+    return adminDb!;
+  } catch (err: any) {
+    console.error("FATAL: getAdminDb failed:", err.message);
+    throw err;
   }
-  return adminDb!;
 }
 
 // No longer needed with Admin SDK
@@ -189,13 +207,15 @@ async function createServer() {
   app.get("/api/debug", async (req, res) => {
     try {
       const config = loadConfig();
-      const db = await getAdminDb();
       res.json({ 
         status: "ok", 
         projectId: config.projectId,
         databaseId: config.firestoreDatabaseId,
-        env: process.env.NODE_ENV,
-        isVercel: !!process.env.VERCEL
+        hasApiKey: !!config.apiKey,
+        hasServiceAccount: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+        nodeEnv: process.env.NODE_ENV,
+        isVercel: !!process.env.VERCEL,
+        time: new Date().toISOString()
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message, stack: err.stack });
@@ -290,8 +310,12 @@ async function createServer() {
         } 
       });
     } catch (err: any) {
-      console.error("Login error:", err);
-      res.status(500).json({ message: "Internal server error", error: err.message });
+      console.error("Login critical failure:", err);
+      res.status(500).json({ 
+        message: "Internal server error during login", 
+        error: err.message,
+        code: err.code || "UNKNOWN_ERROR"
+      });
     }
   });
 
