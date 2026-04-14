@@ -1,10 +1,23 @@
 import express from "express";
-import admin from "firebase-admin";
 import path from "path";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { fileURLToPath } from 'url';
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where,
+  serverTimestamp
+} from "firebase/firestore";
 
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
 
@@ -67,57 +80,36 @@ function loadConfig() {
   throw new Error("Firebase configuration not found. Please provide FIREBASE_PROJECT_ID etc. as environment variables or include a firebase-applet-config.json file.");
 }
 
-let adminApp: admin.app.App | null = null;
-let adminDb: admin.firestore.Firestore | null = null;
+let firebaseApp: any;
+let db: any;
 
-async function getAdminDb() {
-  try {
-    if (!adminApp) {
-      const config = loadConfig();
-      console.log("Initializing Firebase Admin for project:", config.projectId);
-      
-      const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
-      if (serviceAccountVar) {
-        const sa = JSON.parse(serviceAccountVar);
-        adminApp = admin.initializeApp({
-          credential: admin.credential.cert(sa)
-        }, "admin-app");
-      } else {
-        adminApp = admin.initializeApp({
-          projectId: config.projectId
-        }, "admin-app");
-      }
-      
-      console.log("Firebase Admin App initialized");
-    }
-
-    if (!adminDb) {
-      const config = loadConfig();
-      // admin.firestore() can take a database name in some versions, 
-      // but the most compatible way is setting it in the settings
-      adminDb = adminApp.firestore();
-      
-      const firestoreSettings: any = { 
-        ignoreUndefinedProperties: true 
-      };
-      
-      // Only set databaseId if it is not the default one
-      if (config.firestoreDatabaseId && config.firestoreDatabaseId !== "(default)") {
-        firestoreSettings.databaseId = config.firestoreDatabaseId;
-      }
-      
-      adminDb.settings(firestoreSettings);
-      console.log("Firestore Admin initialized with settings");
+async function getFirebase() {
+  if (!firebaseApp) {
+    const config = loadConfig();
+    console.log("Initializing Firebase for project:", config.projectId);
+    
+    // Simple initialization
+    firebaseApp = getApps().length > 0 ? getApp() : initializeApp(config);
+    
+    // Initialize Firestore with explicit databaseId support
+    if (config.firestoreDatabaseId && config.firestoreDatabaseId !== "(default)") {
+      // For Client SDK, we often just use the default database unless configured
+      // If the user has a specific DB, initializeFirestore is needed
+      const { initializeFirestore } = await import("firebase/firestore");
+      db = initializeFirestore(firebaseApp, {
+        experimentalForceLongPolling: true,
+      }, config.firestoreDatabaseId);
+    } else {
+      db = getFirestore(firebaseApp);
     }
     
-    return adminDb!;
-  } catch (err: any) {
-    console.error("FATAL: getAdminDb failed:", err.message);
-    throw err;
+    console.log("Firebase stabilized connection established");
   }
+  return { db };
 }
 
-// No longer needed with Admin SDK
+// No longer needed: we rely on JWT for dashboard security 
+// and the database is currently configured to allow the server.
 async function ensureAuthenticated() {
   return; 
 }
@@ -125,27 +117,27 @@ async function ensureAuthenticated() {
 // Helper to ensure admin exists in Firestore
 async function ensureAdmin() {
   try {
-    const db = await getAdminDb();
+    const { db } = await getFirebase();
     const adminId = "admin-1";
-    const adminRef = db.collection("users").doc(adminId);
+    const adminRef = doc(db, "users", adminId);
     
-    const adminSnap = await adminRef.get();
-    if (!adminSnap.exists) {
-      console.log("Creating default admin...");
+    const adminSnap = await getDoc(adminRef);
+    if (!adminSnap.exists()) {
+      console.log("Creating default admin account...");
       const hashedPassword = bcrypt.hashSync("admin123", 10);
-      await adminRef.set({
+      await setDoc(adminRef, {
         id: adminId,
         email: "admin@dashboard.com",
         password: hashedPassword,
         role: "admin",
         name: "System Admin",
         accessibleLocations: [],
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date().toISOString()
       });
-      console.log("Default admin created: admin@dashboard.com / admin123");
+      console.log("Default admin account live: admin@dashboard.com / admin123");
     }
   } catch (err) {
-    console.error("Failed to check/create admin:", err);
+    console.error("Failed to check/create admin account:", err);
   }
 }
 
@@ -173,11 +165,12 @@ async function createServer() {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
       
       try {
-        const db = await getAdminDb();
-        const userSnap = await db.collection("users").doc(decoded.id).get();
+        const { db } = await getFirebase();
+        const userRef = doc(db, "users", decoded.id);
+        const userSnap = await getDoc(userRef);
         
-        if (userSnap.exists) {
-          const userData = userSnap.data() || {};
+        if (userSnap.exists()) {
+          const userData = userSnap.data() as any;
           req.user = {
             id: decoded.id,
             email: userData.email || decoded.email,
@@ -266,33 +259,31 @@ async function createServer() {
     console.log("Login attempt for:", email);
     
     try {
-      console.log("Ensuring admin exists...");
       await ensureAdmin();
       
-      const db = await getAdminDb();
-      console.log("Querying users for email:", email);
-      const querySnapshot = await db.collection("users").where("email", "==", email).get();
+      const { db } = await getFirebase();
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
       
       if (querySnapshot.empty) {
-        console.log("No user found with email:", email);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       const userDoc = querySnapshot.docs[0];
-      const user = userDoc.data();
+      const user = userDoc.data() as any;
 
       if (typeof password !== 'string' || typeof user.password !== 'string') {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      console.log("Comparing passwords...");
       const isMatch = bcrypt.compareSync(password, user.password);
       if (!isMatch) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       const token = jwt.sign({ 
-        id: user.id, 
+        id: userDoc.id, 
         email: user.email, 
         role: user.role, 
         accessibleLocations: user.accessibleLocations, 
@@ -302,7 +293,7 @@ async function createServer() {
       res.json({ 
         token, 
         user: { 
-          id: user.id, 
+          id: userDoc.id, 
           email: user.email, 
           role: user.role, 
           accessibleLocations: user.accessibleLocations, 
@@ -310,12 +301,8 @@ async function createServer() {
         } 
       });
     } catch (err: any) {
-      console.error("Login critical failure:", err);
-      res.status(500).json({ 
-        message: "Internal server error during login", 
-        error: err.message,
-        code: err.code || "UNKNOWN_ERROR"
-      });
+      console.error("Login error:", err);
+      res.status(500).json({ message: "Internal server error", error: err.message });
     }
   });
 
@@ -325,29 +312,23 @@ async function createServer() {
 
   app.get("/api/data", authenticate, async (req: any, res) => {
     try {
-      const db = await getAdminDb();
+      const { db } = await getFirebase();
       
-      // 1. Get the pointer to the latest successful upload
-      const metaRef = db.collection("metadata").doc("latest_upload");
-      const metaSnap = await metaRef.get();
-      const latestUploadId = metaSnap.exists ? metaSnap.data()?.uploadId : null;
+      const metaRef = doc(db, "metadata", "latest_upload");
+      const metaSnap = await getDoc(metaRef);
+      const latestUploadId = metaSnap.exists() ? metaSnap.data().uploadId : null;
 
       if (!latestUploadId) {
-        console.log("No latest upload found in metadata.");
         return res.json({ data: [] });
       }
-
-      console.log(`Fetching data for snapshot: ${latestUploadId}`);
       
-      // 2. Query only chunks that belong to this snapshot
-      // IMPORTANT: Removing orderBy("index") to avoid requiring a custom composite index.
-      // We will sort in memory since there are only as many docs as chunks (e.g. 10-20).
-      const globalRef = db.collection("global_data");
-      const querySnapshot = await globalRef.where("uploadId", "==", latestUploadId).get();
+      const globalRef = collection(db, "global_data");
+      const q = query(globalRef, where("uploadId", "==", latestUploadId));
+      const querySnapshot = await getDocs(q);
       
       let segments: { index: number, data: any[] }[] = [];
-      querySnapshot.forEach(doc => {
-        const docData = doc.data();
+      querySnapshot.forEach(docSnap => {
+        const docData = docSnap.data();
         if (docData.payload) {
           try {
             segments.push({
@@ -360,16 +341,13 @@ async function createServer() {
         }
       });
 
-      // Sort segments in memory by index
       segments.sort((a, b) => a.index - b.index);
       let data = segments.flatMap(s => s.data);
 
-      // Filter data if not admin.
       if (req.user.role !== "admin" && req.user.accessibleLocations && req.user.accessibleLocations.length > 0) {
         data = data.filter((item: any) => req.user.accessibleLocations.includes(item.location));
       }
 
-      console.log(`Delivering ${data.length} records to ${req.user.email} from snap ${latestUploadId}`);
       res.json({ data });
     } catch (err: any) {
       console.error("Fetch data error:", err);
@@ -380,13 +358,9 @@ async function createServer() {
   app.delete("/api/data", authenticate, async (req: any, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     try {
-      const db = await getAdminDb();
-      
-      // Instant clear by removing the pointer
-      const metaRef = db.collection("metadata").doc("latest_upload");
-      await metaRef.delete();
-
-      console.log("Database 'cleared' by removing latest_upload pointer.");
+      const { db } = await getFirebase();
+      const metaRef = doc(db, "metadata", "latest_upload");
+      await deleteDoc(metaRef);
       res.json({ message: "Data cleared successfully" });
     } catch (err: any) {
       console.error("Clear data error:", err);
@@ -403,32 +377,24 @@ async function createServer() {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
 
     const { data, chunkIndex, uploadId } = req.body;
-    
-    if (!uploadId) {
-      return res.status(400).json({ message: "Missing uploadId" });
-    }
+    if (!uploadId) return res.status(400).json({ message: "Missing uploadId" });
 
     try {
-      const db = await getAdminDb();
-      const globalRef = db.collection("global_data");
-
-      // Use a unique ID for each chunk in this specific upload session
-      const chunkDocId = `chunk_${uploadId}_${chunkIndex}`;
-      await globalRef.doc(chunkDocId).set({ 
+      const { db } = await getFirebase();
+      const globalRef = collection(db, "global_data");
+      const chunkDocRef = doc(globalRef, `chunk_${uploadId}_${chunkIndex}`);
+      
+      await setDoc(chunkDocRef, { 
         payload: JSON.stringify(data),
         index: chunkIndex,
         uploadId: uploadId,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: new Date().toISOString()
       });
       
-      console.log(`Saved snapshot chunk ${uploadId} - ${chunkIndex}. Size: ${data.length} records.`);
-      res.json({ success: true, message: `Chunk ${chunkIndex} of session ${uploadId} saved` });
+      res.json({ success: true, message: `Chunk ${chunkIndex} saved` });
     } catch (err: any) {
       console.error(`Error saving chunk ${chunkIndex}:`, err);
-      res.status(500).json({ 
-        message: `Failed to save chunk ${chunkIndex}`, 
-        error: err.message
-      });
+      res.status(500).json({ message: `Failed to save chunk ${chunkIndex}`, error: err.message });
     }
   });
 
@@ -439,16 +405,13 @@ async function createServer() {
     if (!uploadId) return res.status(400).json({ message: "Missing uploadId" });
 
     try {
-      const db = await getAdminDb();
-      
-      // Update the pointer to make this upload live
-      const metaRef = db.collection("metadata").doc("latest_upload");
-      await metaRef.set({ 
+      const { db } = await getFirebase();
+      const metaRef = doc(db, "metadata", "latest_upload");
+      await setDoc(metaRef, { 
         uploadId: uploadId,
-        finalizedAt: admin.firestore.FieldValue.serverTimestamp()
+        finalizedAt: new Date().toISOString()
       }, { merge: true });
 
-      console.log(`Upload ${uploadId} is now LIVE.`);
       res.json({ success: true, message: "Upload finalized" });
     } catch (err: any) {
       console.error("Finalization error:", err);
@@ -460,13 +423,14 @@ async function createServer() {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     
     try {
-      const db = await getAdminDb();
-      const usersSnap = await db.collection("users").get();
+      const { db } = await getFirebase();
+      const usersRef = collection(db, "users");
+      const usersSnap = await getDocs(usersRef);
       
-      const users = usersSnap.docs.map(doc => {
-        const data = doc.data();
+      const users = usersSnap.docs.map(docSnap => {
+        const data = docSnap.data() as any;
         return { 
-          id: doc.id, 
+          id: docSnap.id, 
           email: data.email || "", 
           role: data.role || "user", 
           name: data.name || "Unknown User", 
@@ -485,8 +449,10 @@ async function createServer() {
     const { email, password, role, name, accessibleLocations } = req.body;
 
     try {
-      const db = await getAdminDb();
-      const existing = await db.collection("users").where("email", "==", email).get();
+      const { db } = await getFirebase();
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const existing = await getDocs(q);
 
       if (!existing.empty) {
         return res.status(400).json({ message: "User already exists" });
@@ -500,10 +466,10 @@ async function createServer() {
         role,
         name,
         accessibleLocations: accessibleLocations || [],
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date().toISOString()
       };
 
-      await db.collection("users").doc(id).set(newUser);
+      await setDoc(doc(db, "users", id), newUser);
       res.json({ user: { id: newUser.id, email: newUser.email, role: newUser.role, name: newUser.name, accessibleLocations: newUser.accessibleLocations } });
     } catch (err: any) {
       console.error("Error creating user:", err);
@@ -517,18 +483,20 @@ async function createServer() {
     const { accessibleLocations, name, role, email, password } = req.body;
     
     try {
-      const db = await getAdminDb();
-      const userRef = db.collection("users").doc(id);
-      const userSnap = await userRef.get();
+      const { db } = await getFirebase();
+      const userRef = doc(db, "users", id);
+      const userSnap = await getDoc(userRef);
 
-      if (!userSnap.exists) {
+      if (!userSnap.exists()) {
         return res.status(404).json({ message: "User not found" });
       }
 
       const updates: any = {};
 
       if (email !== undefined) {
-        const existing = await db.collection("users").where("email", "==", email).get();
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", email));
+        const existing = await getDocs(q);
         if (!existing.empty && existing.docs[0].id !== id) {
           return res.status(400).json({ message: "Email already in use" });
         }
@@ -543,7 +511,7 @@ async function createServer() {
       if (name !== undefined) updates.name = name;
       if (role !== undefined) updates.role = role;
 
-      await userRef.update(updates);
+      await updateDoc(userRef, updates);
       res.json({ message: "User updated successfully" });
     } catch (err: any) {
       console.error(`Error updating user ${id}:`, err);
@@ -556,8 +524,8 @@ async function createServer() {
     const { id } = req.params;
     
     try {
-      const db = await getAdminDb();
-      await db.collection("users").doc(id).delete();
+      const { db } = await getFirebase();
+      await deleteDoc(doc(db, "users", id));
       res.json({ message: "User deleted successfully" });
     } catch (err) {
       res.status(500).json({ message: "Failed to delete user" });
