@@ -241,35 +241,37 @@ export async function createServer() {
     }
   });
 
-  // Single-shot upload for Supabase (Truncate and Insert)
-  app.post("/api/upload", authenticate, async (req: any, res) => {
+  // --- CHUNKED UPLOAD FOR LARGE FILES (SUPABASE) ---
+  
+  // 1. Initial Start (Clears the table)
+  app.post("/api/upload/start", authenticate, async (req: any, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+    try {
+      console.log("Starting chunked upload: Clearing old data...");
+      const { error: deleteError } = await supabase.from('sales').delete().neq('location', '___TRUNCATE_HACK___');
+      if (deleteError) throw deleteError;
+      res.json({ success: true, message: "Table cleared, ready for chunks" });
+    } catch (err: any) {
+      console.error("Upload start error:", err);
+      res.status(500).json({ message: "Failed to start upload", error: err.message });
+    }
+  });
+
+  // 2. Upload Chunk (Appends data)
+  app.post("/api/upload/chunk", authenticate, async (req: any, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     const { data } = req.body;
     if (!Array.isArray(data)) return res.status(400).json({ message: "Invalid data format" });
 
     try {
-      console.log(`Clearing old data and inserting ${data.length} records...`);
-
-      // 1. Delete all existing sales data (as requested: "old data should delete")
-      const { error: deleteError } = await supabase.from('sales').delete().neq('location', '___TRUNCATE_HACK___');
-      if (deleteError) throw deleteError;
-
-      // 2. Prepare data for bulk insert
       const rows = data.map(mapRowToSupabase);
-
-      // 3. Bulk insert (Supabase handles thousands of rows in chunks automatically or we can batch)
-      const BATCH_SIZE = 2000;
-      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-        const batch = rows.slice(i, i + BATCH_SIZE);
-        const { error: insertError } = await supabase.from('sales').insert(batch);
-        if (insertError) throw insertError;
-        console.log(`Inserted batch ${i/BATCH_SIZE + 1}`);
-      }
-
-      res.json({ success: true, message: "Data replaced successfully" });
+      const { error: insertError } = await supabase.from('sales').insert(rows);
+      if (insertError) throw insertError;
+      
+      res.json({ success: true, message: `Inserted chunk of ${data.length} records` });
     } catch (err: any) {
-      console.error("Upload error:", err);
-      res.status(500).json({ message: "Failed to upload data", error: err.message });
+      console.error("Chunk upload error:", err);
+      res.status(500).json({ message: "Failed to upload chunk", error: err.message });
     }
   });
 

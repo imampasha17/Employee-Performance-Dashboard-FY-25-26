@@ -50,37 +50,56 @@ function AppContent() {
       setData(processed);
       setError(null);
 
-      // Upload to server if admin (Single-shot for Supabase)
+      // 1. Instant Preview: Update dashboard state immediately
+      setData(processed);
+      setError(null);
+
+      // 2. Background Upload to Supabase (Chunked to bypass Vercel 4.5MB limit)
       if (user?.role === 'admin') {
         setIsUploading(true);
-        setUploadStatus("Uploading to Supabase...");
+        setUploadStatus("Starting background upload...");
         
         try {
-          const res = await fetch('/api/upload', {
+          // A. Clear table first
+          const startRes = await fetch('/api/upload/start', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ data: processed })
+            headers: { 'Authorization': `Bearer ${token}` }
           });
+          if (!startRes.ok) throw new Error("Failed to initialize upload");
 
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || errData.message || "Upload failed");
+          // B. Upload in chunks of 1,000 rows
+          const CHUNK_SIZE = 1000;
+          const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
+          
+          for (let i = 0; i < processed.length; i += CHUNK_SIZE) {
+            const chunk = processed.slice(i, i + CHUNK_SIZE);
+            const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+            
+            setUploadStatus(`Saving to database... Part ${chunkNum} of ${totalChunks}`);
+            
+            const chunkRes = await fetch('/api/upload/chunk', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ data: chunk })
+            });
+
+            if (!chunkRes.ok) {
+              const errData = await chunkRes.json().catch(() => ({}));
+              throw new Error(errData.error || errData.message || `Failed at part ${chunkNum}`);
+            }
           }
 
-          setUploadStatus("Upload complete! Refreshing dashboard...");
-          setError(null);
-          
-          await fetchData();
+          setUploadStatus("All data saved to cloud!");
           setTimeout(() => {
             setIsUploading(false);
             setUploadStatus(null);
-          }, 2000);
+          }, 3000);
         } catch (uploadErr: any) {
-          console.error("Upload failed:", uploadErr);
-          setError(`Upload failed: ${uploadErr.message}`);
+          console.error("Background upload failed:", uploadErr);
+          setError(`Cloud Sync Failed: ${uploadErr.message}. Data is only visible locally.`);
           setIsUploading(false);
           setUploadStatus(null);
         }
