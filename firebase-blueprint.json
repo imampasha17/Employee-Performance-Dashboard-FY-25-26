@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Application user with role and location access",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "accessibleLocations": { 
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "name", "role"]
+    },
+    "SalesData": {
+      "title": "SalesData",
+      "description": "Individual sales record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "location": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "schemeType": { "type": "string" },
+        "enrolmentCount": { "type": "number" },
+        "enrolmentValue": { "type": "number" },
+        "status": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["location", "employeeName", "schemeType", "enrolmentCount", "enrolmentValue"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile and permissions"
+    },
+    "/sales": {
+      "schema": "SalesData",
+      "description": "Global sales records"
+    }
+  }
+}

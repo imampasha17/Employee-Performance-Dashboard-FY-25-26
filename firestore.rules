@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches Firebase Auth UID)
+    // Fields:
+    //   - id: string (required)
+    //   - email: string (required, email format)
+    //   - name: string (required)
+    //   - role: string (required, 'admin' or 'user')
+    //   - accessibleLocations: list (optional, strings)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: sales
+    // Document ID: auto-generated
+    // Fields:
+    //   - location: string (required)
+    //   - employeeName: string (required)
+    //   - schemeType: string (required)
+    //   - enrolmentCount: number (required)
+    //   - enrolmentValue: number (required)
+    //   - status: string (optional)
+    //   - date: timestamp (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "imampasha17@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'name', 'role']) &&
+             data.email is string &&
+             data.name is string && data.name.size() < 100 &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidSales(data) {
+      return data.keys().hasAll(['location', 'employeeName', 'schemeType', 'enrolmentCount', 'enrolmentValue']) &&
+             data.location is string && data.location.size() < 100 &&
+             data.employeeName is string && data.employeeName.size() < 100 &&
+             data.schemeType is string &&
+             data.enrolmentCount is number &&
+             data.enrolmentValue is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
