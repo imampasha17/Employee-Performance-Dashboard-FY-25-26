@@ -138,17 +138,18 @@ export async function createServer() {
         return res.status(500).json({ message: "Supabase connection not initialized. Check Vercel environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)." });
       }
 
-      const { data: user, error } = await supabase
+      const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
-        .single();
+        .limit(1);
 
       if (error) {
         console.error("Supabase Login Fetch Error:", error);
         return res.status(500).json({ message: `Database error: ${error.message}` });
       }
       
+      const user = users && users.length > 0 ? users[0] : null;
       if (!user) return res.status(401).json({ message: "Invalid credentials (User not found)" });
 
       const isMatch = bcrypt.compareSync(password, user.password);
