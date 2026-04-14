@@ -53,18 +53,29 @@ function AppContent() {
       // Upload to server if admin
       if (user?.role === 'admin') {
         setIsUploading(true);
-        setUploadStatus("Preparing data for upload...");
+        setUploadStatus("Clearing existing data on server...");
         
         try {
-          const CHUNK_SIZE = 2000;
+          // 1. Clear data first
+          const clearRes = await fetch('/api/data', {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (!clearRes.ok) {
+            const clearErr = await clearRes.json().catch(() => ({}));
+            throw new Error(`Failed to clear old data: ${clearErr.message || 'Server error'}`);
+          }
+
+          // 2. Upload in chunks
+          const CHUNK_SIZE = 1000;
           const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
           
           for (let i = 0; i < processed.length; i += CHUNK_SIZE) {
             const chunk = processed.slice(i, i + CHUNK_SIZE);
             const chunkIndex = i / CHUNK_SIZE;
-            const isFirstChunk = i === 0;
             
-            setUploadStatus(`Uploading part ${chunkIndex + 1} of ${totalChunks}... (${processed.length} total records)`);
+            setUploadStatus(`Uploading part ${chunkIndex + 1} of ${totalChunks}... (${processed.length} records)`);
             
             const res = await fetch('/api/upload-chunk', {
               method: 'POST',
@@ -74,8 +85,7 @@ function AppContent() {
               },
               body: JSON.stringify({ 
                 data: chunk, 
-                chunkIndex, 
-                isFirstChunk 
+                chunkIndex
               })
             });
 

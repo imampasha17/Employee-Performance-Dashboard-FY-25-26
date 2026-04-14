@@ -391,15 +391,20 @@ async function createServer() {
   app.delete("/api/data", authenticate, async (req: any, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     try {
-      const { db, collection, getDocs, deleteDoc } = await getFirebase();
+      const { db, collection, getDocs, writeBatch } = await getFirebase();
       const globalRef = collection(db, "global_data");
       const existingDocs = await getDocs(globalRef);
       
-      for (const d of existingDocs.docs) {
-        await deleteDoc(d.ref);
+      const docs = existingDocs.docs;
+      for (let i = 0; i < docs.length; i += 500) {
+        const batch = writeBatch(db);
+        const nextBatch = docs.slice(i, i + 500);
+        nextBatch.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        console.log(`Cleared batch of ${nextBatch.length} documents`);
       }
 
-      res.json({ message: "Data cleared successfully" });
+      res.json({ message: "Data cleared successfully", count: docs.length });
     } catch (err: any) {
       console.error("Clear data error:", err);
       res.status(500).json({ message: "Failed to clear data", error: err.message });
@@ -460,21 +465,8 @@ async function createServer() {
     const { data, chunkIndex, isFirstChunk } = req.body;
     
     try {
-      const { db, collection, doc, setDoc, getDocs, writeBatch } = await getFirebase();
+      const { db, collection, doc, setDoc } = await getFirebase();
       const globalRef = collection(db, "global_data");
-
-      if (isFirstChunk) {
-        console.log("First chunk received. Clearing old data...");
-        const existingDocs = await getDocs(globalRef);
-        const docs = existingDocs.docs;
-        for (let i = 0; i < docs.length; i += 500) {
-          const batch = writeBatch(db);
-          const nextBatch = docs.slice(i, i + 500);
-          nextBatch.forEach(d => batch.delete(d.ref));
-          await batch.commit();
-        }
-        console.log(`Cleared ${docs.length} old documents.`);
-      }
 
       const newDocRef = doc(globalRef, `chunk_${chunkIndex}`);
       await setDoc(newDocRef, { 
