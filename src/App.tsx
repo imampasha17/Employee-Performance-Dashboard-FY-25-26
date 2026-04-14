@@ -64,24 +64,39 @@ function AppContent() {
             const chunk = processed.slice(i, i + CHUNK_SIZE);
             const chunkIndex = i / CHUNK_SIZE;
             
-            setUploadStatus(`Uploading part ${chunkIndex + 1} of ${totalChunks}... (${processed.length} records)`);
+            // Implementation of a simple retry mechanism
+            let attempts = 0;
+            const maxAttempts = 3;
+            let success = false;
             
-            const res = await fetch('/api/upload-chunk', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ 
-                data: chunk, 
-                chunkIndex,
-                uploadId
-              })
-            });
+            while (attempts < maxAttempts && !success) {
+              try {
+                attempts++;
+                setUploadStatus(`Uploading part ${chunkIndex + 1} of ${totalChunks}... ${attempts > 1 ? `(Attempt ${attempts})` : ''}`);
+                
+                const res = await fetch('/api/upload-chunk', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ 
+                    data: chunk, 
+                    chunkIndex,
+                    uploadId
+                  })
+                });
 
-            if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
-              throw new Error(errData.error || errData.message || `Failed to upload part ${chunkIndex + 1}`);
+                if (!res.ok) {
+                  const errData = await res.json().catch(() => ({}));
+                  throw new Error(errData.error || errData.message || `Failed to upload part ${chunkIndex + 1}`);
+                }
+                success = true;
+              } catch (chunkErr: any) {
+                if (attempts >= maxAttempts) throw chunkErr;
+                console.warn(`Part ${chunkIndex + 1} failed, retrying...`, chunkErr);
+                await new Promise(r => setTimeout(r, 1000 * attempts)); // Exponential-ish backoff
+              }
             }
           }
 
@@ -100,8 +115,11 @@ function AppContent() {
             throw new Error(`Finalization failed: ${finalErr.message || 'Server error'}`);
           }
           
-          setUploadStatus("Upload complete!");
+          setUploadStatus("Upload complete! Refreshing dashboard...");
           setError(null);
+          
+          // Trigger a data refresh so the dashboard is immediately updated
+          await fetchData();
           setTimeout(() => {
             setIsUploading(false);
             setUploadStatus(null);
