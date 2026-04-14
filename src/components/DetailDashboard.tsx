@@ -791,6 +791,8 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                       </div>
                     </div>
                   </motion.div>
+                )}
+
                 {activeTab === "master" && (
                   <motion.div
                     key="master"
