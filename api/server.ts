@@ -244,10 +244,10 @@ async function createServer() {
 
   app.get("/api/test-firestore", async (req, res) => {
     try {
-      const db = await getAdminDb();
-      const testRef = db.collection("test").doc("connection");
-      await testRef.set({ time: new Date().toISOString() });
-      const snap = await testRef.get();
+      const { db } = await getFirebase();
+      const testRef = doc(db, "test", "connection");
+      await setDoc(testRef, { time: new Date().toISOString() });
+      const snap = await getDoc(testRef);
       res.json({ success: true, data: snap.data() });
     } catch (err: any) {
       res.status(500).json({ error: err.message, stack: err.stack });
