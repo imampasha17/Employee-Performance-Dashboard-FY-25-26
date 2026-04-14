@@ -100,7 +100,7 @@ export function Dashboard({
   const uniqueEmployees = new Set(filteredData.map((item) => item.employeeCode)).size;
   const uniqueLocations = new Set(filteredData.map((item) => item.location)).size;
 
-  // Aggregated metrics for cards
+  // Aggregated metrics for cards - EXHAUSTIVE LIST
   const metrics = {
     enrolment: { count: filteredData.reduce((sum, d) => sum + d.enrolmentCount, 0), value: filteredData.reduce((sum, d) => sum + d.enrolmentValue, 0) },
     overdue: { count: filteredData.reduce((sum, d) => sum + d.overdueCount, 0), value: filteredData.reduce((sum, d) => sum + d.overdueValue, 0) },
@@ -113,6 +113,15 @@ export function Dashboard({
     redemption: { actual: filteredData.reduce((sum, d) => sum + d.redemptionActual, 0), pending: filteredData.reduce((sum, d) => sum + d.redemptionPending, 0) },
     reEnrolment: { count: filteredData.reduce((sum, d) => sum + d.reEnrolmentCount, 0), value: filteredData.reduce((sum, d) => sum + d.reEnrolmentValue, 0) },
     upSale: { count: filteredData.reduce((sum, d) => sum + d.upSaleCount, 0), value: filteredData.reduce((sum, d) => sum + d.upSaleValue, 0) },
+    // Missing metrics added
+    installment: { value: filteredData.reduce((sum, d) => sum + (d.installmentAmount || 0), 0) },
+    expected: { value: filteredData.reduce((sum, d) => sum + (d.expectedInstAmount || 0), 0) },
+    received: { value: filteredData.reduce((sum, d) => sum + (d.currentReceivedAmount || 0), 0) },
+    discount: { value: filteredData.reduce((sum, d) => sum + (d.schemeDiscount || 0), 0) },
+    odPayment: { value: filteredData.reduce((sum, d) => sum + (d.paymentAgainstOverdueValue || 0), 0) },
+    cdPayment: { value: filteredData.reduce((sum, d) => sum + (d.currentDueCollectionValue || 0), 0) },
+    collectionRcvd: { value: filteredData.reduce((sum, d) => sum + (d.collectionReceivedValue || 0), 0) },
+    paidCustomers: { count: filteredData.reduce((sum, d) => sum + (d.paidCustomerCount || 0), 0) },
   };
 
   const schemeData = [
@@ -522,114 +531,67 @@ export function Dashboard({
                 </div>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
-                <StatsCard
-                  title="Enrolments"
-                  value={formatNumber(metrics.enrolment.count)}
-                  subValue={formatCurrency(metrics.enrolment.value)}
-                  icon={FileSpreadsheet}
-                  className="border-b-4 border-b-blue-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-blue-50 text-blue-600"
-                  description="Total scheme volume"
-                />
-                <StatsCard
-                  title="Overdue"
-                  value={formatNumber(metrics.overdue.count)}
-                  subValue={formatCurrency(metrics.overdue.value)}
-                  icon={AlertCircle}
-                  className="border-b-4 border-b-rose-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-rose-50 text-rose-600"
-                  description="Outstanding installments"
-                />
-                <StatsCard
-                  title="OD Collection"
-                  value={formatNumber(metrics.odCollection.count)}
-                  subValue={formatCurrency(metrics.odCollection.value)}
-                  icon={TrendingUp}
-                  className="border-b-4 border-b-emerald-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-emerald-50 text-emerald-600"
-                  description="Overdue collection value"
-                />
-                <StatsCard
-                  title="Current Due"
-                  value={formatNumber(metrics.currentDue.count)}
-                  subValue={formatCurrency(metrics.currentDue.value)}
-                  icon={Calendar}
-                  className="border-b-4 border-b-amber-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-amber-50 text-amber-600"
-                  description="Current month dues"
-                />
-                <StatsCard
-                  title="Total Due"
-                  value={formatNumber(metrics.totalDue.count)}
-                  subValue={formatCurrency(metrics.totalDue.value)}
-                  icon={IndianRupee}
-                  className="border-b-4 border-b-red-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-red-50 text-red-600"
-                  description="Due count and value"
-                />
-                <StatsCard
-                  title="Due Customers"
-                  value={formatNumber(metrics.dueCustomers)}
-                  icon={Users}
-                  className="border-b-4 border-b-fuchsia-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-fuchsia-50 text-fuchsia-600"
-                  description="Unique customer names/profiles"
-                />
-                <StatsCard
-                  title="CD Collection"
-                  value={formatNumber(metrics.cdCollection.count)}
-                  subValue={formatCurrency(metrics.cdCollection.value)}
-                  icon={Check}
-                  className="border-b-4 border-b-indigo-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-indigo-50 text-indigo-600"
-                  description="Current due collection"
-                />
-                <StatsCard
-                  title="Forclosed"
-                  value={formatNumber(metrics.forclosed.count)}
-                  subValue={formatCurrency(metrics.forclosed.value)}
-                  icon={X}
-                  className="border-b-4 border-b-slate-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-slate-50 text-slate-600"
-                  description="Closed before maturity"
-                />
-                <StatsCard
-                  title="Redemption"
-                  value={formatCurrency(metrics.redemption.actual)}
-                  subValue={`Pending: ${formatCurrency(metrics.redemption.pending)}`}
-                  icon={Trophy}
-                  className="border-b-4 border-b-violet-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-violet-50 text-violet-600"
-                  description="Actual vs Pending"
-                />
-                <StatsCard
-                  title="Re-enrolment"
-                  value={formatNumber(metrics.reEnrolment.count)}
-                  subValue={formatCurrency(metrics.reEnrolment.value)}
-                  icon={Users}
-                  className="border-b-4 border-b-cyan-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-cyan-50 text-cyan-600"
-                  description="Renewed memberships"
-                />
-                <StatsCard
-                  title="UP Sale"
-                  value={formatNumber(metrics.upSale.count)}
-                  subValue={formatCurrency(metrics.upSale.value)}
-                  icon={ArrowUpRight}
-                  className="border-b-4 border-b-orange-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-orange-50 text-orange-600"
-                  description="Additional sales value"
-                />
-                <StatsCard
-                  title="Store Workforce"
-                  value={uniqueEmployees}
-                  icon={Users}
-                  className="border-b-4 border-b-teal-500 hover:scale-[1.02] transition-transform duration-300"
-                  iconClassName="bg-teal-50 text-teal-600"
-                  description={selectedLocation ? `Active in ${selectedLocation}` : "Total active contributors"}
-                />
+              {/* Categorized Stats Scorecard */}
+              <div className="space-y-12 pb-10">
+                {/* 1. Volume & Growth */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Sales & Volume Metrics</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
+                    <StatsCard title="Total Enrolments" value={formatNumber(metrics.enrolment.count)} subValue={formatCurrency(metrics.enrolment.value)} icon={FileSpreadsheet} iconClassName="bg-blue-50 text-blue-600" description="Gross scheme enrolment" />
+                    <StatsCard title="Re-Enrolment" value={formatNumber(metrics.reEnrolment.count)} subValue={formatCurrency(metrics.reEnrolment.value)} icon={RefreshCw} iconClassName="bg-cyan-50 text-cyan-600" description="Renewed accounts" />
+                    <StatsCard title="UP Sale" value={formatNumber(metrics.upSale.count)} subValue={formatCurrency(metrics.upSale.value)} icon={ArrowUpRight} iconClassName="bg-orange-50 text-orange-600" description="Additional sales value" />
+                    <StatsCard title="Inst. Amount" value={formatCurrency(metrics.installment.value)} icon={IndianRupee} iconClassName="bg-slate-100 text-slate-600" description="Total installment volume" />
+                    <StatsCard title="Expected Inst." value={formatCurrency(metrics.expected.value)} icon={Calendar} iconClassName="bg-indigo-50 text-indigo-600" description="Expected monthly total" />
+                    <StatsCard title="Scheme Discounts" value={formatCurrency(metrics.discount.value)} icon={Shield} iconClassName="bg-amber-50 text-amber-600" description="Total discount given" />
+                  </div>
+                </div>
+
+                {/* 2. Collection Efficiency */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-6 bg-emerald-600 rounded-full" />
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Collection Efficiency</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                    <StatsCard title="Total Collected" value={formatCurrency(metrics.collectionRcvd.value)} icon={TrendingUp} iconClassName="bg-emerald-50 text-emerald-600" description="Total realized collection" />
+                    <StatsCard title="OD Collection" value={formatNumber(metrics.odCollection.count)} subValue={formatCurrency(metrics.odCollection.value)} icon={Check} iconClassName="bg-emerald-50 text-emerald-600" description="Overdue collections" />
+                    <StatsCard title="CD Collection" value={formatNumber(metrics.cdCollection.count)} subValue={formatCurrency(metrics.cdCollection.value)} icon={LayoutDashboard} iconClassName="bg-emerald-50 text-emerald-600" description="Current due collections" />
+                    <StatsCard title="OD Paid Value" value={formatCurrency(metrics.odPayment.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Payments vs Overdue" />
+                    <StatsCard title="CD Paid Value" value={formatCurrency(metrics.cdPayment.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Current month payments" />
+                  </div>
+                </div>
+
+                {/* 3. Outstanding & Dues */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-6 bg-rose-600 rounded-full" />
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Outstanding & Dues</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                    <StatsCard title="Total Due Value" value={formatCurrency(metrics.totalDue.value)} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Total unpaid amount" />
+                    <StatsCard title="Total Customers Due" value={formatNumber(metrics.dueCustomers)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Unique customers O/S" />
+                    <StatsCard title="Overdue Pending" value={formatNumber(metrics.overdue.count)} subValue={formatCurrency(metrics.overdue.value)} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Aged outstanding" />
+                    <StatsCard title="Current Dues" value={formatNumber(metrics.currentDue.count)} subValue={formatCurrency(metrics.currentDue.value)} icon={Calendar} iconClassName="bg-rose-50 text-rose-600" description="Current month O/S" />
+                    <StatsCard title="Forclosed" value={formatNumber(metrics.forclosed.count)} subValue={formatCurrency(metrics.forclosed.value)} icon={Trash2} iconClassName="bg-slate-100 text-slate-600" description="Prematurely closed" />
+                  </div>
+                </div>
+
+                {/* 4. Strategic Metrics */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-6 bg-violet-600 rounded-full" />
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Strategic & Closure</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <StatsCard title="Actual Redemption" value={formatCurrency(metrics.redemption.actual)} icon={Trophy} iconClassName="bg-violet-50 text-violet-600" description="Realized redemptions" />
+                    <StatsCard title="Pending Redemption" value={formatCurrency(metrics.redemption.pending)} icon={TrendingUp} iconClassName="bg-violet-50 text-violet-600" description="Expected redemptions" />
+                    <StatsCard title="Paid Cust Count" value={formatNumber(metrics.paidCustomers.count)} icon={Users} iconClassName="bg-blue-50 text-blue-600" description="Total paying customers" />
+                    <StatsCard title="Store Workforce" value={uniqueEmployees} icon={Users} iconClassName="bg-teal-50 text-teal-600" description="Active contributors" />
+                  </div>
+                </div>
               </div>
 
               {/* Scheme Performance Section - Moved up */}

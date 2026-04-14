@@ -74,7 +74,7 @@ interface DetailDashboardProps {
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
-type Tab = "overview" | "enrollment" | "collection" | "re-enrollment";
+type Tab = "overview" | "enrollment" | "collection" | "re-enrollment" | "master";
 type SortKey = "customerName" | "installmentAmount" | "totalDue" | "collectionReceivedValue" | "schemeType";
 type SortDir = "asc" | "desc";
 
@@ -224,6 +224,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
     { id: "enrollment", label: "Enrollment", count: enrolmentCustomers.length, icon: BookOpen, color: "emerald" },
     { id: "collection", label: "Collection / Due", count: collectionCustomers.length, icon: Wallet, color: "amber" },
     { id: "re-enrollment", label: "Re-Enrollment", count: reEnrolmentCustomers.length, icon: RefreshCw, color: "cyan" },
+    { id: "master", label: "Master analytical Sheet", count: customers.length, icon: FileText, color: "slate" },
   ];
 
   return (
@@ -787,6 +788,108 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                       </div>
                       <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         Showing {filterCustomers(reEnrolmentCustomers).length} of {reEnrolmentCustomers.length} re-enrollment records
+                      </div>
+                    </div>
+                  </motion.div>
+                {activeTab === "master" && (
+                  <motion.div
+                    key="master"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-slate-400" />
+                        <h3 className="text-lg font-black text-slate-900">Master Data Grid</h3>
+                      </div>
+                      <button
+                        onClick={() => downloadCSV(customers, `${data.name}-full-data.csv`)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all"
+                      >
+                        <Download className="w-4 h-4" /> Export All Columns
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search across all fields..."
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse" style={{ minWidth: '4500px' }}>
+                          <thead>
+                            <tr className="bg-slate-50/50">
+                              <th className="sticky left-0 bg-slate-50 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 z-20">#</th>
+                              <th className="sticky left-12 bg-slate-50 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 z-20 min-w-[200px]">Customer Name</th>
+                              {/* Metadata */}
+                              {[
+                                "source", "location", "locationCode", "employeeCode", "employeeName", "profileNo", "orderNo", "schemeType", "schemeStatus", "joiningDate"
+                              ].map(key => (
+                                <th key={key} className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 whitespace-nowrap">{key}</th>
+                              ))}
+                              {/* Numeric values */}
+                              {[
+                                "installmentAmount", "expectedInstAmount", "currentReceivedAmount", "totalDue", "paidCustomerCount", "collectionReceivedValue", "collectionPercent",
+                                "paymentAgainstOverdueValue", "currentDueCollectionValue", "schemeDiscount", "enrolmentCount", "enrolmentValue", "overdueCount", "overdueValue",
+                                "odCollectionCount", "odCollectionValue", "currentDueCount", "currentDueValue", "cdCollectionCount", "cdCollectionValue", "forclosedCount",
+                                "forclosedValue", "redemptionActual", "redemptionPending", "reEnrolmentCount", "reEnrolmentValue", "upSaleCount", "upSaleValue"
+                              ].map(key => (
+                                <th key={key} className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-emerald-600 border-b border-slate-100 whitespace-nowrap text-right bg-emerald-50/10">
+                                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {sortCustomers(filterCustomers(customers)).map((c, i) => (
+                              <tr key={c.id || i} className="hover:bg-slate-50/80 transition-colors group">
+                                <td className="sticky left-0 bg-white group-hover:bg-slate-50 px-4 py-3.5 text-[11px] font-black text-slate-400 border-r border-slate-50 z-10">{i + 1}</td>
+                                <td className="sticky left-12 bg-white group-hover:bg-slate-50 px-4 py-3.5 border-r border-slate-50 z-10 min-w-[200px]">
+                                  <span className="text-[12px] font-black text-slate-900 truncate block">{c.customerName || "—"}</span>
+                                </td>
+                                {/* Metadata Cells */}
+                                {[
+                                  "source", "location", "locationCode", "employeeCode", "employeeName", "profileNo", "orderNo", "schemeType", "schemeStatus", "joiningDate"
+                                ].map(key => (
+                                  <td key={key} className="px-4 py-3.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">{(c as any)[key] || "—"}</td>
+                                ))}
+                                {/* Numeric Cells */}
+                                {[
+                                  "installmentAmount", "expectedInstAmount", "currentReceivedAmount", "totalDue", "paidCustomerCount", "collectionReceivedValue", "collectionPercent",
+                                  "paymentAgainstOverdueValue", "currentDueCollectionValue", "schemeDiscount", "enrolmentCount", "enrolmentValue", "overdueCount", "overdueValue",
+                                  "odCollectionCount", "odCollectionValue", "currentDueCount", "currentDueValue", "cdCollectionCount", "cdCollectionValue", "forclosedCount",
+                                  "forclosedValue", "redemptionActual", "redemptionPending", "reEnrolmentCount", "reEnrolmentValue", "upSaleCount", "upSaleValue"
+                                ].map(key => {
+                                  const val = (c as any)[key] || 0;
+                                  const isMoney = key.toLowerCase().includes('value') || key.toLowerCase().includes('amount') || key.toLowerCase().includes('discount') || key.toLowerCase().includes('redemption');
+                                  const isPercent = key.toLowerCase().includes('percent');
+                                  return (
+                                    <td key={key} className="px-4 py-3.5 text-[11px] font-black text-right whitespace-nowrap tabular-nums border-l border-slate-50/50">
+                                      {isPercent ? `${val.toFixed(1)}%` : isMoney ? formatCurrency(val) : formatNumber(val)}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          Showing {filterCustomers(customers).length} of {customers.length} records • analytical Sheet Active
+                        </span>
+                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                          Total Analytical Matrix Size: {customers.length} x 41
+                        </span>
                       </div>
                     </div>
                   </motion.div>

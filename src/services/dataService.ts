@@ -281,6 +281,7 @@ export function getStatsByEmployee(data: ProcessedData[]): EmployeeStat[] {
     stats.upSaleCount += item.upSaleCount || 0;
     stats.upSaleValue += item.upSaleValue || 0;
     stats.redemptionPending += item.redemptionPending || 0;
+    stats.schemeDiscount = (stats.schemeDiscount || 0) + (item.schemeDiscount || 0);
 
     // Scheme counts
     if (item.enrolmentCount > 0) {
