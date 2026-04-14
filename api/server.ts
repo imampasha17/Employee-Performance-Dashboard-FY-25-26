@@ -13,16 +13,20 @@ const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("CRITICAL: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.");
-}
+let supabase: any;
 
-const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+try {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
   }
-});
+} catch (err) {
+  console.error("Supabase Init Error:", err);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -124,6 +128,10 @@ async function createServer() {
   app.post("/api/login", async (req, res) => {
     const { email, password } = req.body;
     try {
+      if (!supabase) {
+        return res.status(500).json({ message: "Supabase connection not initialized. Check Vercel environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)." });
+      }
+
       const { data: user, error } = await supabase
         .from('users')
         .select('*')
