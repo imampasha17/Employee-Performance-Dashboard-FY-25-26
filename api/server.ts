@@ -108,8 +108,37 @@ const withTimeout = (promise: Promise<any>, ms: number, label: string) => {
   ]);
 };
 
+// Lightweight REST Helper to bypass SDK initialization timeouts
+async function restWrite(collectionPath: string, docId: string, data: any) {
+  const config = loadConfig();
+  const dbId = config.firestoreDatabaseId && config.firestoreDatabaseId !== "(default)" 
+    ? config.firestoreDatabaseId 
+    : "(default)";
+  
+  const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${dbId}/documents/${collectionPath}/${docId}?key=${config.apiKey}`;
+  
+  // Map JS object to Firestore REST fields
+  const fields: any = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string') fields[key] = { stringValue: value };
+    else if (typeof value === 'number') fields[key] = { doubleValue: value };
+    else if (typeof value === 'boolean') fields[key] = { booleanValue: value };
+  }
+
+  const res = await fetch(url, {
+    method: 'PATCH', // PATCH works as setDoc with merge/overwrite
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`REST Write Failed: ${JSON.stringify(err.error || err)}`);
+  }
+  return res.json();
+}
+
 // No longer needed: we rely on JWT for dashboard security 
-// and the database is currently configured to allow the server.
 async function ensureAuthenticated() {
   return; 
 }
@@ -380,18 +409,15 @@ async function createServer() {
     if (!uploadId) return res.status(400).json({ message: "Missing uploadId" });
 
     try {
-      const { db } = await getFirebase();
-      const globalRef = collection(db, "global_data");
-      const chunkDocRef = doc(globalRef, `chunk_${uploadId}_${chunkIndex}`);
-      
-      await withTimeout(setDoc(chunkDocRef, { 
+      console.log(`Saving chunk ${chunkIndex} via REST API...`);
+      await restWrite("global_data", `chunk_${uploadId}_${chunkIndex}`, {
         payload: JSON.stringify(data),
         index: chunkIndex,
         uploadId: uploadId,
         updatedAt: new Date().toISOString()
-      }), 12000, `Upload Chunk ${chunkIndex}`); // 12s timeout for setDoc
+      });
       
-      res.json({ success: true, message: `Chunk ${chunkIndex} saved` });
+      res.json({ success: true, message: `Chunk ${chunkIndex} saved via REST` });
     } catch (err: any) {
       console.error(`Error saving chunk ${chunkIndex}:`, err);
       res.status(500).json({ message: `Failed to save chunk ${chunkIndex}`, error: err.message });
@@ -405,12 +431,11 @@ async function createServer() {
     if (!uploadId) return res.status(400).json({ message: "Missing uploadId" });
 
     try {
-      const { db } = await getFirebase();
-      const metaRef = doc(db, "metadata", "latest_upload");
-      await setDoc(metaRef, { 
+      console.log(`Finalizing upload ${uploadId} via REST...`);
+      await restWrite("metadata", "latest_upload", {
         uploadId: uploadId,
         finalizedAt: new Date().toISOString()
-      }, { merge: true });
+      });
 
       res.json({ success: true, message: "Upload finalized" });
     } catch (err: any) {

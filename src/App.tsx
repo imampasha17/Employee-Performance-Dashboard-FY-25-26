@@ -57,8 +57,8 @@ function AppContent() {
         setUploadStatus("Initializing snapshot upload...");
         
         try {
-          // Use a smaller chunk size to stay safely within Firestore 1MB limits
-          const CHUNK_SIZE = 400; 
+          // Use micro-chunks (100 records) for guaranteed Vercel compatibility
+          const CHUNK_SIZE = 100; 
           const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
           
           for (let i = 0; i < processed.length; i += CHUNK_SIZE) {
