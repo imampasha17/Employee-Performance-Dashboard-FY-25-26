@@ -50,94 +50,37 @@ function AppContent() {
       setData(processed);
       setError(null);
 
-      // Upload to server if admin
+      // Upload to server if admin (Single-shot for Supabase)
       if (user?.role === 'admin') {
         setIsUploading(true);
-        const uploadId = `snap_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        setUploadStatus("Initializing snapshot upload...");
+        setUploadStatus("Uploading to Supabase...");
         
         try {
-          // Micro-chunks (50 records) + 1s delay for maximum compatibility with Free/Limited projects
-          const CHUNK_SIZE = 50; 
-          const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
-          
-          for (let i = 0; i < processed.length; i += CHUNK_SIZE) {
-            const chunk = processed.slice(i, i + CHUNK_SIZE);
-            const chunkIndex = i / CHUNK_SIZE;
-            
-            let attempts = 0;
-            const maxAttempts = 3;
-            let success = false;
-            
-            while (attempts < maxAttempts && !success) {
-              try {
-                attempts++;
-                setUploadStatus(`Uploading part ${chunkIndex + 1} of ${totalChunks}... ${attempts > 1 ? `(Attempt ${attempts})` : ''}`);
-                
-                const res = await fetch('/api/upload-chunk', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                  },
-                  body: JSON.stringify({ 
-                    data: chunk, 
-                    chunkIndex,
-                    uploadId
-                  })
-                });
-
-                if (!res.ok) {
-                  const errData = await res.json().catch(() => ({}));
-                  throw new Error(errData.error || errData.message || `Failed to upload part ${chunkIndex + 1}`);
-                }
-                
-                success = true;
-                // Use smaller chunk size and larger delay to avoid rate limits
-                await new Promise(r => setTimeout(r, 1000));
-              } catch (chunkErr: any) {
-                console.error(`Attempt ${attempts} failed for part ${chunkIndex + 1}:`, chunkErr);
-                if (attempts >= maxAttempts) throw chunkErr;
-                await new Promise(r => setTimeout(r, 3000 * attempts)); // Backoff
-              }
-            }
-          }
-
-          setUploadStatus("Finalizing snapshot...");
-          const finalRes = await fetch('/api/finalize-upload', {
+          const res = await fetch('/api/upload', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ uploadId })
+            body: JSON.stringify({ data: processed })
           });
 
-          if (!finalRes.ok) {
-            const finalErr = await finalRes.json().catch(() => ({}));
-            throw new Error(`Finalization failed: ${finalErr.message || 'Server error'}`);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || errData.message || "Upload failed");
           }
-          
+
           setUploadStatus("Upload complete! Refreshing dashboard...");
           setError(null);
           
-          // Trigger a data refresh so the dashboard is immediately updated
           await fetchData();
           setTimeout(() => {
             setIsUploading(false);
             setUploadStatus(null);
-          }, 3000);
+          }, 2000);
         } catch (uploadErr: any) {
-          console.error("Critical upload failure:", uploadErr);
-          const rawMsg = uploadErr.message || "Unknown error";
-          
-          if (rawMsg.includes("RESOURCE_EXHAUSTED")) {
-            setError(`Firebase Limit Hit (RESOURCE_EXHAUSTED): ${rawMsg}. Recommendation: Wait 24 hours or upgrade to a dedicated Firebase project ID.`);
-          } else if (rawMsg.includes("DB_ERR_429")) {
-            setError(`Rate Limit Hit (Too Fast): ${rawMsg}. Slowing down and retrying is recommended.`);
-          } else {
-            setError(`Upload failed: ${rawMsg}. The data is only saved locally.`);
-          }
+          console.error("Upload failed:", uploadErr);
+          setError(`Upload failed: ${uploadErr.message}`);
           setIsUploading(false);
           setUploadStatus(null);
         }
@@ -161,11 +104,7 @@ function AppContent() {
         setError(null);
       } else {
         const errData = await res.json().catch(() => ({}));
-        if (errData.error?.includes("RESOURCE_EXHAUSTED")) {
-          setError("Failed to clear data: Firebase Quota Exceeded. Please try again tomorrow or upgrade your Firebase plan.");
-        } else {
-          setError(`Failed to clear data: ${errData.error || errData.message || 'Unknown error'}`);
-        }
+        setError(`Failed to clear data: ${errData.error || errData.message || 'Unknown error'}`);
       }
     } catch (err) {
       setError("Network error: failed to clear data.");
