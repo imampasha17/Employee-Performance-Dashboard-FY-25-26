@@ -76,7 +76,7 @@ function mapRowToSupabase(row: any) {
   };
 }
 
-async function createServer() {
+export async function createServer() {
   const app = express();
   app.use(express.json({ limit: '100mb' }));
 
@@ -353,11 +353,19 @@ async function createServer() {
   }
 
   const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => {
-    console.log(`Supabase-backed server running on port ${PORT}`);
-  });
+  // Only listen if we are NOT on Vercel
+  if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+      console.log(`Supabase-backed server running on port ${PORT}`);
+    });
+  }
+
+  return app;
 }
 
-createServer().catch(err => {
-  console.error("Failed to start server:", err);
-});
+// Only run standalone if this is the entry point
+if (process.argv[1]?.includes('server.ts') || process.argv[1]?.includes('server.js')) {
+  createServer().catch(err => {
+    console.error("Failed to start server:", err);
+  });
+}
