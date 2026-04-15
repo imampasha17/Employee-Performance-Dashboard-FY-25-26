@@ -541,10 +541,10 @@ export function Dashboard({
                       <TrendingUp className="w-3 h-3" />
                       Live Performance Tracking
                     </div>
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-none">
+                    <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.1] sm:leading-none">
                       FY 2026-27 <span className="text-blue-600">Analytics</span>
                     </h1>
-                    <p className="text-sm sm:text-base text-slate-500 max-w-2xl font-medium leading-relaxed">
+                    <p className="text-xs sm:text-base text-slate-500 max-w-2xl font-medium leading-relaxed">
                       {user.role === 'admin' 
                         ? "Complete enterprise visibility across all locations." 
                         : `Performance data for: ${user.accessibleLocations.join(', ')}`}
@@ -620,14 +620,14 @@ export function Dashboard({
                     </div>
 
                     {dateFilter === 'custom' && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         <input
                           type="date"
                           value={customDateRange.start}
                           onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
                           className="px-3 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition-all shadow-lg shadow-slate-200/30"
                         />
-                        <span className="text-slate-400 font-bold">to</span>
+                        <span className="text-slate-400 font-bold text-center">to</span>
                         <input
                           type="date"
                           value={customDateRange.end}
