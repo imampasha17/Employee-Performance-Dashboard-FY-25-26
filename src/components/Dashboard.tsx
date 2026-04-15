@@ -682,10 +682,10 @@ export function Dashboard({
                     <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Sales & Volume Metrics</h2>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
-                    <StatsCard title="Total Enrolments" value={formatNumber(metrics.enrolment.count)} subValue={formatCurrency(metrics.enrolment.value)} icon={FileSpreadsheet} iconClassName="bg-blue-50 text-blue-600" description="Gross scheme enrolment" />
+                    <StatsCard title="Total Enrolments" value={formatCurrency(metrics.enrolment.value)} subValue={`${formatNumber(metrics.enrolment.count)} Enrolments`} icon={FileSpreadsheet} iconClassName="bg-blue-50 text-blue-600" description="Gross scheme enrolment" />
                     <StatsCard title="Inst. Amount" value={formatCurrency(metrics.installment.value)} icon={IndianRupee} iconClassName="bg-slate-100 text-slate-600" description="Total installment volume" />
-                    <StatsCard title="Re-Enrolment" value={formatNumber(metrics.reEnrolment.count)} subValue={formatCurrency(metrics.reEnrolment.value)} icon={RefreshCw} iconClassName="bg-cyan-50 text-cyan-600" description="Renewed accounts" />
-                    <StatsCard title="UP Sale" value={formatNumber(metrics.upSale.count)} subValue={formatCurrency(metrics.upSale.value)} icon={ArrowUpRight} iconClassName="bg-orange-50 text-orange-600" description="Additional sales value" />
+                    <StatsCard title="Re-Enrolment" value={formatCurrency(metrics.reEnrolment.value)} subValue={`${formatNumber(metrics.reEnrolment.count)} Re-Enrolments`} icon={RefreshCw} iconClassName="bg-cyan-50 text-cyan-600" description="Renewed accounts" />
+                    <StatsCard title="UP Sale" value={formatCurrency(metrics.upSale.value)} subValue={`${formatNumber(metrics.upSale.count)} Up Sales`} icon={ArrowUpRight} iconClassName="bg-orange-50 text-orange-600" description="Additional sales value" />
                     <StatsCard title="Expected Inst." value={formatCurrency(metrics.expected.value)} icon={Calendar} iconClassName="bg-indigo-50 text-indigo-600" description="Expected monthly total" />
                     <StatsCard title="Scheme Discounts" value={formatCurrency(metrics.discount.value)} icon={Shield} iconClassName="bg-amber-50 text-amber-600" description="Total discount given" />
                   </div>
@@ -699,8 +699,8 @@ export function Dashboard({
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                     <StatsCard title="Total Collected" value={formatCurrency(metrics.collectionRcvd.value)} icon={TrendingUp} iconClassName="bg-emerald-50 text-emerald-600" description="Total realized collection" />
-                    <StatsCard title="OD Collection" value={formatNumber(metrics.odCollection.count)} subValue={formatCurrency(metrics.odCollection.value)} icon={Check} iconClassName="bg-emerald-50 text-emerald-600" description="Overdue collections" />
-                    <StatsCard title="CD Collection" value={formatNumber(metrics.cdCollection.count)} subValue={formatCurrency(metrics.cdCollection.value)} icon={LayoutDashboard} iconClassName="bg-emerald-50 text-emerald-600" description="Current due collections" />
+                    <StatsCard title="OD Collection" value={formatCurrency(metrics.odCollection.value)} subValue={`${formatNumber(metrics.odCollection.count)} Collections`} icon={Check} iconClassName="bg-emerald-50 text-emerald-600" description="Overdue collections" />
+                    <StatsCard title="CD Collection" value={formatCurrency(metrics.cdCollection.value)} subValue={`${formatNumber(metrics.cdCollection.count)} Collections`} icon={LayoutDashboard} iconClassName="bg-emerald-50 text-emerald-600" description="Current due collections" />
                     <StatsCard title="OD Paid Value" value={formatCurrency(metrics.odPayment.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Payments vs Overdue" />
                     <StatsCard title="CD Paid Value" value={formatCurrency(metrics.cdPayment.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Current month payments" />
                   </div>
@@ -715,9 +715,9 @@ export function Dashboard({
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                     <StatsCard title="Total Due Value" value={formatCurrency(metrics.totalDue.value)} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Total unpaid amount" />
                     <StatsCard title="Total Customers Due" value={formatNumber(metrics.dueCustomers)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Unique customers O/S" />
-                    <StatsCard title="Overdue Pending" value={formatNumber(metrics.overdue.count)} subValue={formatCurrency(metrics.overdue.value)} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Aged outstanding" />
-                    <StatsCard title="Current Dues" value={formatNumber(metrics.currentDue.count)} subValue={formatCurrency(metrics.currentDue.value)} icon={Calendar} iconClassName="bg-rose-50 text-rose-600" description="Current month O/S" />
-                    <StatsCard title="Forclosed" value={formatNumber(metrics.forclosed.count)} subValue={formatCurrency(metrics.forclosed.value)} icon={Trash2} iconClassName="bg-slate-100 text-slate-600" description="Prematurely closed" />
+                    <StatsCard title="Overdue Pending" value={formatCurrency(metrics.overdue.value)} subValue={`${formatNumber(metrics.overdue.count)} Pending`} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Aged outstanding" />
+                    <StatsCard title="Current Dues" value={formatCurrency(metrics.currentDue.value)} subValue={`${formatNumber(metrics.currentDue.count)} Dues`} icon={Calendar} iconClassName="bg-rose-50 text-rose-600" description="Current month O/S" />
+                    <StatsCard title="Forclosed" value={formatCurrency(metrics.forclosed.value)} subValue={`${formatNumber(metrics.forclosed.count)} Schemes`} icon={Trash2} iconClassName="bg-slate-100 text-slate-600" description="Prematurely closed" />
                   </div>
                 </div>
 

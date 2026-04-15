@@ -136,7 +136,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
       bg: "bg-rose-50",
     },
     {
-      label: "Collection",
+      label: "Collection Value",
       value: formatCurrency(data.totalCollection),
       subValue: `${formatNumber(data.collectionCustomerCount || 0)} Collections`,
       icon: TrendingUp,
@@ -144,7 +144,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
       bg: "bg-emerald-50",
     },
     {
-      label: "Forclosed",
+      label: "Forclosed Val.",
       value: formatCurrency(data.totalForclosedValue || 0),
       subValue: `${formatNumber(data.foreclosedCount || 0)} Schemes`,
       icon: XCircle,
@@ -152,7 +152,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
       bg: "bg-slate-100",
     },
     {
-      label: "Re-Enrolled",
+      label: "Re-Enrolled Val.",
       value: formatCurrency(data.totalReEnrolmentValue || 0),
       subValue: `${formatNumber(data.totalReEnrolmentCount || 0)} Re-Enrolments`,
       icon: RefreshCw,
@@ -168,7 +168,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
       bg: "bg-violet-50",
     },
     {
-      label: "Up Sale",
+      label: "Up Sale Value",
       value: formatCurrency(data.totalUpSaleValue || 0),
       subValue: `${formatNumber(data.totalUpSaleCount || 0)} Up Sales`,
       icon: Zap,

@@ -13,19 +13,28 @@ function normalizeKey(key: string) {
 }
 
 function getValue(normalized: Map<string, string>, names: string[]) {
+  const normalizedNames = names.map(normalizeKey);
+  
+  // First, try exact matches and favor non-empty ones
   for (const name of names) {
     const value = normalized.get(normalizeKey(name));
-    if (value !== undefined) return value;
+    if (value !== undefined && String(value).trim() !== "") return value;
   }
 
-  // Handle case where keys might have been modified by PapaParse (e.g. duplicate names)
+  // Then, handle modified keys (e.g., PapaParse duplicates like "Source_1")
+  // We want the LAST non-empty value for a given name if possible, as it's often the "Grand Total" or "Real Data"
+  let lastFoundValue = "";
   for (const [key, value] of normalized.entries()) {
-    for (const name of names) {
-      if (key.startsWith(normalizeKey(name))) return value;
+    for (const normalName of normalizedNames) {
+      if (key.startsWith(normalName)) {
+        if (String(value).trim() !== "") {
+          lastFoundValue = String(value).trim();
+        }
+      }
     }
   }
 
-  return "";
+  return lastFoundValue;
 }
 
 function baseRow(normalized: Map<string, string>, source: ProcessedData["source"]): ProcessedData {
@@ -93,10 +102,15 @@ export function parseCSV(csvString: string): ProcessedData[] {
 
   // Detect source type more robustly
   let source: ProcessedData["source"] = "enrollment";
+  
   if (normalizedFields.some(f => f.includes("overdue") || f.includes("pending") || f.includes("due"))) {
+    // If it has "due" or "pending", it's likely a due/collection report
     source = "dueCollection";
-  } else if (normalizedFields.some(f => f.includes("received") || f.includes("collection"))) {
+  } else if (normalizedFields.some(f => f === "collectionreceived" || f === "totalcollection" || f === "odpayment" || f === "cdpayment")) {
     source = "dueCollection";
+  } else if (normalizedFields.some(f => f.includes("enrol") || f.includes("enrolment") || f.includes("enrollment"))) {
+    // If it has enrolment keywords, it's definitely enrollment
+    source = "enrollment";
   }
 
   // Handle re-enrollment specific structure if needed
@@ -143,22 +157,31 @@ export function parseCSV(csvString: string): ProcessedData[] {
           item.enrolmentValue = item.reEnrolmentValue;
         }
       } else {
-        // Enrolment
-        const extraCount = cleanNum(getValue(normalized, ["No Of Enrollment"]));
-        item.enrolmentCount = extraCount || 1;
-        item.enrolmentValue = cleanNum(getValue(normalized, ["Enrollement Amount", "Inst Amount", "Installment Amount", "Enrolment Value"])) || item.installmentAmount || 0;
+        // Enrolment / Re-Enrolment report logic
+        const rawEnrolCount = cleanNum(getValue(normalized, ["No Of Enrollment", "No.of Enrolment"]));
+        const rawInstAmount = cleanNum(getValue(normalized, ["Inst Amount", "Inst Amount", "Enrollement Amount", "Installment Amount", "Enrolment Value"]));
         
-        const typeStr = getValue(normalized, ["Is Re-Enrolment", "Type", "Scheme Nature", "SCHEME_NATURE"]).toLowerCase();
-        const isReEnrolment = typeStr.includes("re") || typeStr.includes("renew") || isReEnrollmentFile;
-        if (isReEnrolment) {
-          item.reEnrolmentCount = item.enrolmentCount;
-          item.reEnrolmentValue = item.enrolmentValue;
-        }
-
+        // Detect if this specific row is a re-enrollment
+        const typeStr = (getValue(normalized, ["Is Re-Enrolment", "Type", "Scheme Nature", "SCHEME_NATURE"]) || "").toLowerCase();
+        const isReEnrol = typeStr.includes("re") || typeStr.includes("renew") || isReEnrollmentFile;
         const isUpSale = typeStr.includes("up") || typeStr.includes("sale");
-        if (isUpSale) {
-           item.upSaleCount = item.enrolmentCount;
-           item.upSaleValue = item.enrolmentValue;
+
+        if (isReEnrol) {
+          item.reEnrolmentCount = rawEnrolCount || 1;
+          item.reEnrolmentValue = rawInstAmount || item.installmentAmount || 0;
+          // Re-enrollments are also counted as general enrollments for total volume
+          item.enrolmentCount = item.reEnrolmentCount;
+          item.enrolmentValue = item.reEnrolmentValue;
+        } else if (isUpSale) {
+          item.upSaleCount = rawEnrolCount || 1;
+          item.upSaleValue = rawInstAmount || item.installmentAmount || 0;
+          // Up-sales are also counted as general enrollments for total volume
+          item.enrolmentCount = item.upSaleCount;
+          item.enrolmentValue = item.upSaleValue;
+        } else {
+          // Standard enrolment
+          item.enrolmentCount = rawEnrolCount || 1;
+          item.enrolmentValue = rawInstAmount || item.installmentAmount || 0;
         }
       }
 

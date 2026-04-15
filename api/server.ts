@@ -324,10 +324,15 @@ export async function createServer() {
   app.delete("/api/data", authenticate, async (req: any, res) => {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     try {
-      await supabase.from('sales').delete().neq('location', '___TRUNCATE_HACK___');
+      if (!supabase) {
+        return res.json({ message: "Local mode: No Supabase to clear" });
+      }
+      const { error } = await supabase.from('sales').delete().neq('location', '___TRUNCATE_HACK___');
+      if (error) throw error;
       res.json({ message: "Data cleared successfully" });
     } catch (err: any) {
-      res.status(500).json({ message: "Failed to clear data" });
+      console.error("Clear data error:", err);
+      res.status(500).json({ message: "Failed to clear data", error: err.message });
     }
   });
 
