@@ -39,6 +39,8 @@ export function Dashboard({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [dateFilter, setDateFilter] = useState<'all' | 'mtd' | 'qtd' | 'ytd' | 'custom'>('all');
+  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
     if (user.role === 'admin' && activeTab === 'dashboard') {
@@ -62,6 +64,23 @@ export function Dashboard({
 
   const selectedUser = users.find(u => u.id === selectedUserId);
 
+  const monthMap: Record<string, number> = {
+    'Apr': 3, 'May': 4, 'Jun': 5, 'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11, 'Jan': 0, 'Feb': 1, 'Mar': 2
+  };
+
+  const getDocDate = (d: ProcessedData) => {
+    if (d.reportDate) {
+      const parsed = new Date(d.reportDate);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    const monthIdx = monthMap[d.reportMonth || ''] ?? -1;
+    if (monthIdx !== -1) {
+      const year = monthIdx >= 3 ? 2026 : 2027;
+      return new Date(year, monthIdx, 1);
+    }
+    return null;
+  };
+
   const accessibleLocations = useMemo(() => {
     if (user.role === 'admin') {
       if (selectedUser) {
@@ -77,20 +96,55 @@ export function Dashboard({
   const filteredData = useMemo(() => {
     let filtered = data;
     
-    // If not admin, restrict to user's locations
+    // 1. User/Location Filter
     if (user.role !== 'admin') {
       filtered = data.filter(d => user.accessibleLocations.includes(d.location));
     } else if (selectedUser && selectedUser.role !== 'admin') {
-      // If admin has selected a non-admin user, restrict to that user's locations
       filtered = data.filter(d => selectedUser.accessibleLocations.includes(d.location));
     }
 
     if (selectedLocation) {
       filtered = filtered.filter(d => d.location === selectedLocation);
     }
+
+    // 2. Date Filter
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      filtered = filtered.filter(d => {
+        const docDate = getDocDate(d);
+        if (!docDate) return false;
+
+        const docMonth = docDate.getMonth();
+        const docYear = docDate.getFullYear();
+
+        if (dateFilter === 'mtd') {
+          return docMonth === currentMonth && docYear === currentYear;
+        }
+        if (dateFilter === 'qtd') {
+          const currentQuarter = Math.floor(currentMonth / 3);
+          const docQuarter = Math.floor(docMonth / 3);
+          return currentQuarter === docQuarter && docYear === currentYear;
+        }
+        if (dateFilter === 'ytd') {
+          const fiscalYearStart = currentMonth >= 3 ? currentYear : currentYear - 1;
+          const docFiscalYear = docMonth >= 3 ? docYear : docYear - 1;
+          return docFiscalYear === fiscalYearStart;
+        }
+        if (dateFilter === 'custom') {
+          if (!customDateRange.start || !customDateRange.end) return true;
+          const start = new Date(customDateRange.start);
+          const end = new Date(customDateRange.end);
+          return docDate >= start && docDate <= end;
+        }
+        return true;
+      });
+    }
     
     return filtered;
-  }, [data, user, selectedUser, selectedLocation]);
+  }, [data, user, selectedUser, selectedLocation, dateFilter, customDateRange]);
 
   const locationStats = useMemo(() => getStatsByLocation(filteredData), [filteredData]);
   const employeeStats = useMemo(() => getStatsByEmployee(filteredData), [filteredData]);
@@ -540,11 +594,52 @@ export function Dashboard({
                         <TrendingUp className="h-4 w-4 text-slate-400 rotate-90" />
                       </div>
                     </div>
-                    {(selectedLocation || selectedUserId) && (
+
+                    {/* Date Filter Selector */}
+                    <div className="relative w-full sm:max-w-xs group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Calendar className="h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                      </div>
+                      <select
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value as any)}
+                        className="block w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition-all appearance-none shadow-lg shadow-slate-200/30 cursor-pointer"
+                      >
+                        <option value="all">All Time</option>
+                        <option value="mtd">MTD (Month to Date)</option>
+                        <option value="qtd">QTD (Quarter to Date)</option>
+                        <option value="ytd">YTD (Year to Date)</option>
+                        <option value="custom">Custom Range</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                        <TrendingUp className="h-4 w-4 text-slate-400 rotate-90" />
+                      </div>
+                    </div>
+
+                    {dateFilter === 'custom' && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          value={customDateRange.start}
+                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                          className="px-3 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition-all shadow-lg shadow-slate-200/30"
+                        />
+                        <span className="text-slate-400 font-bold">to</span>
+                        <input
+                          type="date"
+                          value={customDateRange.end}
+                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                          className="px-3 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition-all shadow-lg shadow-slate-200/30"
+                        />
+                      </div>
+                    )}
+
+                    {(selectedLocation || selectedUserId || dateFilter !== 'all') && (
                       <button 
                         onClick={() => {
                           setSelectedLocation("");
                           setSelectedUserId("");
+                          setDateFilter("all");
                         }}
                         className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-xl transition-colors text-center"
                       >

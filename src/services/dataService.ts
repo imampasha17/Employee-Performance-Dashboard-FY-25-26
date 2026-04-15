@@ -31,32 +31,36 @@ function getValue(normalized: Map<string, string>, names: string[]) {
 function baseRow(normalized: Map<string, string>, source: ProcessedData["source"]): ProcessedData {
   const orderNo = getValue(normalized, ["Order No", "Order Number"]);
   const profileNo = getValue(normalized, ["Profile No", "Profile Number", "Account No"]);
-  const employeeCode = getValue(normalized, ["Emp Code", "EMP ID", "Employee Code", "Staff ID"]);
-  const customerName = getValue(normalized, ["Customer Name", "Name of Customer"]);
+  const employeeCode = getValue(normalized, ["Emp Code", "EMP ID", "Employee Code", "Staff ID", "EMP_CODE"]);
+  const customerName = getValue(normalized, ["Customer Name", "Name of Customer", "CUSTOMER_NAME"]);
+  const reportMonth = getValue(normalized, ["Report Month", "Month"]);
+  const reportDateRaw = getValue(normalized, ["Report Date As on", "Date"]);
 
   return {
     id: [source, orderNo, profileNo, employeeCode, customerName, Math.random().toString(36).substr(2, 5)].filter(Boolean).join("-"),
     source,
-    locationCode: getValue(normalized, ["Location Code", "Store Code"]).trim(),
+    locationCode: getValue(normalized, ["Location Code", "Store Code", "LOCATION_CODE"]).trim(),
     location: getValue(normalized, ["Location", "Store Name", "Branch"]).trim(),
     employeeCode: String(employeeCode || "").trim(),
-    employeeName: getValue(normalized, ["Emp Name", "Employee Name", "Sales Person"]).trim(),
-    joiningDate: getValue(normalized, ["Joining Date", "DOJ"]).trim(),
+    employeeName: getValue(normalized, ["Emp Name", "Employee Name", "Sales Person", "EMP_NAME"]).trim(),
+    joiningDate: getValue(normalized, ["Joining Date", "DOJ", "JOINING_DATE"]).trim(),
     orderNo: orderNo.trim(),
     profileNo: profileNo.trim(),
     customerName: customerName.trim(),
-    schemeType: getValue(normalized, ["Scheme Type", "Scheme type", "Plan Name"]).trim(),
-    schemeStatus: getValue(normalized, ["Scheme Status", "Status"]),
-    installmentAmount: cleanNum(getValue(normalized, ["Installment Amount", "Inst Amt", "Inst Amount"])),
+    schemeType: getValue(normalized, ["Scheme Type", "Scheme type", "Plan Name", "Scheme_Type"]).trim(),
+    schemeStatus: getValue(normalized, ["Scheme Status", "Status", "SCHEME_STATUS"]),
+    installmentAmount: cleanNum(getValue(normalized, ["Installment Amount", "Inst Amt", "Inst Amount", "Enrollement Amount"])),
     expectedInstAmount: cleanNum(getValue(normalized, ["Expected Inst Amount", "Expected Amt"])),
-    currentReceivedAmount: cleanNum(getValue(normalized, ["Current Received Amount", "Current Received Amt", "Received Amt"])),
+    currentReceivedAmount: cleanNum(getValue(normalized, ["Current Received Amount", "Current Received Amt", "Received Amt", "CURRENT_RECEIVED_AMT"])),
     totalDue: cleanNum(getValue(normalized, ["Total Due", "Outstanding"])),
-    paidCustomerCount: cleanNum(getValue(normalized, ["Paid Cust count", "Paid Customers"])),
+    paidCustomerCount: cleanNum(getValue(normalized, ["Paid Cust count", "Paid Customers", "Paid Cust"])),
     collectionReceivedValue: cleanNum(getValue(normalized, ["Collection Received", "Collection Received Apr-26", "Total Collection"])),
     collectionPercent: cleanNum(getValue(normalized, ["Collect %", "Collection %"])),
     paymentAgainstOverdueValue: cleanNum(getValue(normalized, ["Payment Received Against Over Due", "OD Payment"])),
     currentDueCollectionValue: cleanNum(getValue(normalized, ["Current Due Against Collection", "CD Payment"])),
-    schemeDiscount: cleanNum(getValue(normalized, ["Scheme Discount", "Discount"])),
+    schemeDiscount: cleanNum(getValue(normalized, ["Scheme Discount", "Discount", "Scheme Discount"])),
+    reportMonth: reportMonth.trim(),
+    reportDate: reportDateRaw.trim() || undefined,
     enrolmentCount: 0,
     enrolmentValue: 0,
     overdueCount: 0,
@@ -91,16 +95,17 @@ export function parseCSV(csvString: string): ProcessedData[] {
   let source: ProcessedData["source"] = "enrollment";
   if (normalizedFields.some(f => f.includes("overdue") || f.includes("pending") || f.includes("due"))) {
     source = "dueCollection";
-  } else if (normalizedFields.some(f => f.includes("collection") || f.includes("received"))) {
+  } else if (normalizedFields.some(f => f.includes("received") || f.includes("collection"))) {
     source = "dueCollection";
-  } else if (normalizedFields.some(f => f.includes("reenrollment"))) {
-    source = "enrollment";
   }
+
+  // Handle re-enrollment specific structure if needed
+  const isReEnrollmentFile = csvString.toLowerCase().includes("re-enrollment") || csvString.toLowerCase().includes("re-enrolment");
 
   return headerResults.data
     .filter(row => {
-      const loc = row["Location"] || row["Store Name"] || row["Branch"];
-      const emp = row["Emp Code"] || row["EMP ID"] || row["Employee Code"];
+      const loc = row["Location"] || row["Store Name"] || row["Branch"] || row["LOCATION_CODE"];
+      const emp = row["Emp Code"] || row["EMP ID"] || row["Employee Code"] || row["EMP_CODE"];
       return loc && emp;
     })
     .map(row => {
@@ -110,9 +115,9 @@ export function parseCSV(csvString: string): ProcessedData[] {
       const item = baseRow(normalized, source);
 
       if (source === "dueCollection") {
-        const paidCount = cleanNum(getValue(normalized, ["Paid Cust count", "Paid Customers"]));
+        const paidCount = cleanNum(getValue(normalized, ["Paid Cust count", "Paid Customers", "Paid Cust"]));
         const odCollectionValue = cleanNum(getValue(normalized, ["Payment Received Against Over Due", "OD Payment"]));
-        const cdCollectionValue = cleanNum(getValue(normalized, ["Current Due Against Collection", "CD Payment"]));
+        const cdCollectionValue = cleanNum(getValue(normalized, ["Current Due Against Collection", "CD Payment", "Current Due Against Collection"]));
         
         item.overdueCount = cleanNum(getValue(normalized, ["Overdue Pending Inst Count", "Overdue Count"]));
         item.overdueValue = cleanNum(getValue(normalized, ["Overdue Pending Amount", "Overdue Amt"]));
@@ -123,47 +128,37 @@ export function parseCSV(csvString: string): ProcessedData[] {
         item.cdCollectionCount = cdCollectionValue > 0 ? (paidCount || 1) : 0;
         item.cdCollectionValue = cdCollectionValue;
         
-        // Foreclosed, Redemption, Re-enrolment from specific column names if they exist
-        item.forclosedCount = cleanNum(getValue(normalized, ["Foreclosed Count", "Closed Count"])) > 0 ? 1 : 0;
-        item.forclosedValue = cleanNum(getValue(normalized, ["Foreclosed Value", "Closed Value"]));
+        item.forclosedCount = cleanNum(getValue(normalized, ["Foreclosed Count", "Closed Count"])) > 0 ? 1 : (getValue(normalized, ["Foreclosed"]) === 'Yes' ? 1 : 0);
+        item.forclosedValue = cleanNum(getValue(normalized, ["Foreclosed Value", "Closed Value", "Foreclosed Amount"]));
         item.redemptionActual = cleanNum(getValue(normalized, ["Redemption Actual", "Redeemed Amt"]));
         item.redemptionPending = cleanNum(getValue(normalized, ["Redemption Pending", "Expected Redemption"]));
-        // Re-enrolment from specific column names if they exist
-        item.reEnrolmentCount = cleanNum(getValue(normalized, ["Re-Enrolment Count", "No of Enrollment"])) > 0 ? 1 : 0;
-        item.reEnrolmentValue = cleanNum(getValue(normalized, ["Re-Enrolment Value", "Inst Amount"]));
+        
+        item.reEnrolmentCount = cleanNum(getValue(normalized, ["Re-Enrolment Count"])) > 0 ? 1 : 0;
+        item.reEnrolmentValue = cleanNum(getValue(normalized, ["Re-Enrolment Value"]));
         item.upSaleCount = cleanNum(getValue(normalized, ["UpSale Count"])) > 0 ? 1 : 0;
         item.upSaleValue = cleanNum(getValue(normalized, ["UpSale Value"]));
 
-        // If it's from the specific re-enrollment summary file, set enactment count too
         if (item.reEnrolmentCount > 0 && item.enrolmentCount === 0) {
           item.enrolmentCount = item.reEnrolmentCount;
           item.enrolmentValue = item.reEnrolmentValue;
         }
       } else {
         // Enrolment
-        item.enrolmentCount = 1;
-        item.enrolmentValue = item.installmentAmount || 0;
+        const extraCount = cleanNum(getValue(normalized, ["No Of Enrollment"]));
+        item.enrolmentCount = extraCount || 1;
+        item.enrolmentValue = cleanNum(getValue(normalized, ["Enrollement Amount", "Inst Amount", "Installment Amount", "Enrolment Value"])) || item.installmentAmount || 0;
         
-        // Also look for specific enrolment flags
-        const typeStr = getValue(normalized, ["Is Re-Enrolment", "Type", "Scheme Nature"]).toLowerCase();
-        const isReEnrolment = typeStr.includes("re") || typeStr.includes("renew");
+        const typeStr = getValue(normalized, ["Is Re-Enrolment", "Type", "Scheme Nature", "SCHEME_NATURE"]).toLowerCase();
+        const isReEnrolment = typeStr.includes("re") || typeStr.includes("renew") || isReEnrollmentFile;
         if (isReEnrolment) {
-          item.reEnrolmentCount = 1;
-          item.reEnrolmentValue = item.installmentAmount || 0;
+          item.reEnrolmentCount = item.enrolmentCount;
+          item.reEnrolmentValue = item.enrolmentValue;
         }
 
-        // Handle the specific "No of Enrollment" column if it exists in enrollment sources
-        const extraCount = cleanNum(getValue(normalized, ["No Of Enrollment"]));
-        if (extraCount > 0) {
-          item.enrolmentCount = extraCount;
-          item.enrolmentValue = cleanNum(getValue(normalized, ["Inst Amount"])) || item.enrolmentValue;
-          // If we are in enrollment and see "No of Enrollment", it might be the re-enrollment summary file
-          // which doesn't have "re-enrollment" in the name/nature, so we check if filename logic can be added later
-          // For now, if source is detected as enrollment but it has "Inst Amount" from re-enrollment summary:
-          if (csvString.includes("Re-Enrollment") || csvString.includes("re-enrolment")) {
-             item.reEnrolmentCount = extraCount;
-             item.reEnrolmentValue = item.enrolmentValue;
-          }
+        const isUpSale = typeStr.includes("up") || typeStr.includes("sale");
+        if (isUpSale) {
+           item.upSaleCount = item.enrolmentCount;
+           item.upSaleValue = item.enrolmentValue;
         }
       }
 

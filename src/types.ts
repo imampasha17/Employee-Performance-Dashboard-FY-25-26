@@ -39,6 +39,8 @@ export interface ProcessedData {
   reEnrolmentValue: number;
   upSaleCount: number;
   upSaleValue: number;
+  reportMonth?: string;
+  reportDate?: string; // For sorting and exact filtering
 }
 
 export interface EmployeeStat {
