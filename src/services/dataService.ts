@@ -149,8 +149,8 @@ export function parseCSV(csvString: string): ProcessedData[] {
       return !!emp;
     })
     .map(row => {
-      const normalized = new Map(
-        Object.entries(row).map(([key, value]) => [normalizeKey(key), value])
+      const normalized = new Map<string, string>(
+        Object.entries(row).map(([key, value]) => [normalizeKey(key), value as string])
       );
       const item = baseRow(normalized, source);
 

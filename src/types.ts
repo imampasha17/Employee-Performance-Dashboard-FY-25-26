@@ -81,3 +81,17 @@ export interface AuthState {
   isAuthenticated: boolean;
   loading: boolean;
 }
+
+export interface LocationStats {
+  location: string;
+  totalCount: number;
+  totalAmount: number;
+  totalOverdue: number;
+  totalCollection: number;
+  employeeCount: number;
+  enrolmentValue: number;
+  totalDue: number;
+  totalForclosed: number;
+  reEnrolmentCount: number;
+  upSaleCount: number;
+}
