@@ -227,6 +227,11 @@ export async function createServer() {
         query = query.in('location', req.user.accessibleLocations);
       }
 
+      // Disable caching for this endpoint to ensure sync across users
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
       const { data, error } = await query;
       if (error) throw error;
 
@@ -291,7 +296,11 @@ export async function createServer() {
         return res.json({ success: true, message: "Local mode: No Supabase to clear" });
       }
       console.log("Starting chunked upload: Clearing old data...");
-      const { error: deleteError } = await supabase.from('sales').delete().neq('location', '___TRUNCATE_HACK___');
+      // Inclusive delete filter: handle rows with null/empty location by using multiple criteria
+      const { error: deleteError } = await supabase.from('sales')
+        .delete()
+        .or('location.neq.___TRUNCATE_HACK___,location.is.null');
+      
       if (deleteError) throw deleteError;
       res.json({ success: true, message: "Table cleared, ready for chunks" });
     } catch (err: any) {
@@ -327,7 +336,10 @@ export async function createServer() {
       if (!supabase) {
         return res.json({ message: "Local mode: No Supabase to clear" });
       }
-      const { error } = await supabase.from('sales').delete().neq('location', '___TRUNCATE_HACK___');
+      const { error } = await supabase.from('sales')
+        .delete()
+        .or('location.neq.___TRUNCATE_HACK___,location.is.null');
+      
       if (error) throw error;
       res.json({ message: "Data cleared successfully" });
     } catch (err: any) {

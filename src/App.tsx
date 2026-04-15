@@ -47,9 +47,6 @@ function AppContent() {
         return;
       }
 
-      setData(processed);
-      setError(null);
-
       // 1. Instant Preview: Update dashboard state immediately
       setData(processed);
       setError(null);
@@ -93,6 +90,9 @@ function AppContent() {
           }
 
           setUploadStatus("All data saved to cloud!");
+          // Final sync with database to ensure everything is matched correctly
+          await fetchData();
+          
           setTimeout(() => {
             setIsUploading(false);
             setUploadStatus(null);

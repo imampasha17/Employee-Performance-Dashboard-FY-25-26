@@ -58,7 +58,7 @@ function baseRow(normalized: Map<string, string>, source: ProcessedData["source"
     customerName: customerName.trim(),
     schemeType: getValue(normalized, ["Scheme Type", "Scheme type", "Plan Name", "Scheme_Type"]).trim(),
     schemeStatus: getValue(normalized, ["Scheme Status", "Status", "SCHEME_STATUS"]),
-    installmentAmount: cleanNum(getValue(normalized, ["Installment Amount", "Inst Amt", "Inst Amount", "Enrollement Amount", "INSTALLMENT_AMOUNT"])),
+    installmentAmount: cleanNum(getValue(normalized, ["Installment Amount", "Installement Amount", "Inst Amt", "Inst Amount", "Enrollement Amount", "INSTALLMENT_AMOUNT"])),
     expectedInstAmount: cleanNum(getValue(normalized, ["Expected Inst Amount", "Expected Amt", "Expected Inst"])),
     currentReceivedAmount: cleanNum(getValue(normalized, ["Current Received Amount", "Current Received Amt", "Received Amt", "CURRENT_RECEIVED_AMT"])),
     totalDue: cleanNum(getValue(normalized, ["Total Due", "Outstanding"])),
@@ -159,7 +159,7 @@ export function parseCSV(csvString: string): ProcessedData[] {
       } else {
         // Enrolment / Re-Enrolment report logic
         const rawEnrolCount = cleanNum(getValue(normalized, ["No Of Enrollment", "No.of Enrolment"]));
-        const rawInstAmount = cleanNum(getValue(normalized, ["Inst Amount", "Inst Amount", "Enrollement Amount", "Installment Amount", "Enrolment Value"]));
+        const rawInstAmount = cleanNum(getValue(normalized, ["Inst Amount", "Installement Amount", "Inst Amount", "Enrollement Amount", "Installment Amount", "Enrolment Value"]));
         
         // Detect if this specific row is a re-enrollment
         const typeStr = (getValue(normalized, ["Is Re-Enrolment", "Type", "Scheme Nature", "SCHEME_NATURE"]) || "").toLowerCase();
