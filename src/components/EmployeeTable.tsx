@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Search, User, Trophy, ArrowUpRight, FileSpreadsheet } from "lucide-react";
 import { formatCurrency, formatNumber, cn } from "../lib/utils";
-import { motion, AnimatePresence } from "motion/react";
 import { EmployeeStat } from "../types";
 
 interface EmployeeTableProps {
@@ -81,57 +80,51 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
           </div>
 
           <div className="divide-y divide-slate-100">
-            <AnimatePresence mode="popLayout">
-              {filteredData.length > 0 ? (
-                filteredData.map(employee => {
-                  const isTop5 = top5Ids.includes(employee.employeeCode);
-                  return (
-                    <motion.button
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      key={`${employee.location}-${employee.employeeCode}`}
-                      onClick={() => onEmployeeClick?.(employee)}
-                      className="w-full text-left px-4 py-3 bg-white hover:bg-blue-50/40 transition-colors group grid grid-cols-[minmax(200px,1fr)_100px_80px_100px_80px_80px_80px_100px_100px_80px_100px_36px] gap-3 items-center"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                          isTop5 ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600"
-                        )}>
-                          {isTop5 ? <Trophy className="w-4 h-4" /> : <User className="w-4 h-4" />}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-black text-sm text-slate-900 truncate group-hover:text-blue-700">
-                            {employee.employeeName}
-                          </div>
-                          <div className="text-[10px] font-bold text-slate-400">ID: {employee.employeeCode}</div>
-                        </div>
+            {filteredData.length > 0 ? (
+              filteredData.map(employee => {
+                const isTop5 = top5Ids.includes(employee.employeeCode);
+                return (
+                  <button
+                    key={`${employee.location}-${employee.employeeCode}`}
+                    onClick={() => onEmployeeClick?.(employee)}
+                    className="w-full text-left px-4 py-3 bg-white hover:bg-blue-50/40 transition-colors group grid grid-cols-[minmax(200px,1fr)_100px_80px_100px_80px_80px_80px_100px_100px_80px_100px_36px] gap-3 items-center"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                        isTop5 ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600"
+                      )}>
+                        {isTop5 ? <Trophy className="w-4 h-4" /> : <User className="w-4 h-4" />}
                       </div>
-                      <RowValue value={employee.location} />
-                      <RowValue value={formatNumber(employee.totalCount)} align="right" />
-                      <RowValue value={formatCurrency(employee.totalAmount)} align="right" />
-                      <RowValue value={formatNumber(employee.enrolmentCustomerCount)} align="right" />
-                      <RowValue value={formatNumber(employee.collectionCustomerCount)} align="right" />
-                      <RowValue value={formatNumber(employee.dueCustomerCount)} tone="rose" align="right" />
-                      <RowValue value={formatCurrency(employee.totalCollection)} tone="emerald" align="right" />
-                      <RowValue value={formatCurrency(employee.totalDue)} tone="rose" align="right" />
-                      <RowValue value={formatNumber(employee.reEnrolmentCount)} tone="emerald" align="right" />
-                      <RowValue value={formatCurrency(employee.reEnrolmentValue)} tone="emerald" align="right" />
-                      <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500" />
-                    </motion.button>
-                  );
-                })
-              ) : (
-                <div className="px-8 py-12 text-center">
-                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mx-auto mb-3">
-                    <Search className="w-6 h-6" />
-                  </div>
-                  <p className="text-slate-500 font-medium tracking-tight text-sm">No employees found matching "{searchQuery}"</p>
+                      <div className="min-w-0">
+                        <div className="font-black text-sm text-slate-900 truncate group-hover:text-blue-700">
+                          {employee.employeeName}
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400">ID: {employee.employeeCode}</div>
+                      </div>
+                    </div>
+                    <RowValue value={employee.location} />
+                    <RowValue value={formatNumber(employee.totalCount)} align="right" />
+                    <RowValue value={formatCurrency(employee.totalAmount)} align="right" />
+                    <RowValue value={formatNumber(employee.enrolmentCustomerCount)} align="right" />
+                    <RowValue value={formatNumber(employee.collectionCustomerCount)} align="right" />
+                    <RowValue value={formatNumber(employee.dueCustomerCount)} tone="rose" align="right" />
+                    <RowValue value={formatCurrency(employee.totalCollection)} tone="emerald" align="right" />
+                    <RowValue value={formatCurrency(employee.totalDue)} tone="rose" align="right" />
+                    <RowValue value={formatNumber(employee.reEnrolmentCount)} tone="emerald" align="right" />
+                    <RowValue value={formatCurrency(employee.reEnrolmentValue)} tone="emerald" align="right" />
+                    <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500" />
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-8 py-12 text-center">
+                <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mx-auto mb-3">
+                  <Search className="w-6 h-6" />
                 </div>
-              )}
-            </AnimatePresence>
+                <p className="text-slate-500 font-medium tracking-tight text-sm">No employees found matching "{searchQuery}"</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Users, MapPin, IndianRupee, TrendingUp, Calendar, FileSpreadsheet, LogOut, Shield, Upload, LayoutDashboard, AlertCircle, X, Check, Trophy, ArrowUpRight, User as UserIcon, Trash2 } from "lucide-react";
+import { Users, MapPin, IndianRupee, TrendingUp, Calendar, FileSpreadsheet, LogOut, Shield, Upload, LayoutDashboard, AlertCircle, X, Check, Trophy, ArrowUpRight, User as UserIcon, Trash2, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ProcessedData, User } from "../types";
 import { getStatsByLocation, getStatsByEmployee } from "../services/dataService";
@@ -92,60 +92,107 @@ export function Dashboard({
     return filtered;
   }, [data, user, selectedUser, selectedLocation]);
 
-  const locationStats = getStatsByLocation(filteredData);
-  const employeeStats = getStatsByEmployee(filteredData);
+  const locationStats = useMemo(() => getStatsByLocation(filteredData), [filteredData]);
+  const employeeStats = useMemo(() => getStatsByEmployee(filteredData), [filteredData]);
 
-  const totalRevenue = filteredData.reduce((sum, item) => sum + item.enrolmentValue, 0);
-  const totalCount = filteredData.reduce((sum, item) => sum + item.enrolmentCount, 0);
-  const uniqueEmployees = new Set(filteredData.map((item) => item.employeeCode)).size;
-  const uniqueLocations = new Set(filteredData.map((item) => item.location)).size;
+  const { metrics, totalRevenue, totalCount, uniqueEmployees, uniqueLocations, schemeData } = useMemo(() => {
+    const m = {
+      enrolment: { count: 0, value: 0 },
+      overdue: { count: 0, value: 0 },
+      odCollection: { count: 0, value: 0 },
+      currentDue: { count: 0, value: 0 },
+      totalDue: { count: 0, value: 0 },
+      cdCollection: { count: 0, value: 0 },
+      forclosed: { count: 0, value: 0 },
+      redemption: { actual: 0, pending: 0 },
+      reEnrolment: { count: 0, value: 0 },
+      upSale: { count: 0, value: 0 },
+      installment: { value: 0 },
+      expected: { value: 0 },
+      received: { value: 0 },
+      discount: { value: 0 },
+      odPayment: { value: 0 },
+      cdPayment: { value: 0 },
+      collectionRcvd: { value: 0 },
+      paidCustomers: { count: 0 },
+    };
 
-  // Aggregated metrics for cards - EXHAUSTIVE LIST
-  const metrics = {
-    enrolment: { count: filteredData.reduce((sum, d) => sum + d.enrolmentCount, 0), value: filteredData.reduce((sum, d) => sum + d.enrolmentValue, 0) },
-    overdue: { count: filteredData.reduce((sum, d) => sum + d.overdueCount, 0), value: filteredData.reduce((sum, d) => sum + d.overdueValue, 0) },
-    odCollection: { count: filteredData.reduce((sum, d) => sum + d.odCollectionCount, 0), value: filteredData.reduce((sum, d) => sum + d.odCollectionValue, 0) },
-    currentDue: { count: filteredData.reduce((sum, d) => sum + d.currentDueCount, 0), value: filteredData.reduce((sum, d) => sum + d.currentDueValue, 0) },
-    totalDue: { count: filteredData.filter(d => (d.totalDue || 0) > 0).length, value: filteredData.reduce((sum, d) => sum + (d.totalDue || 0), 0) },
-    dueCustomers: new Set(filteredData.filter(d => (d.totalDue || 0) > 0).map(d => d.profileNo || d.customerName || d.id).filter(Boolean)).size,
-    cdCollection: { count: filteredData.reduce((sum, d) => sum + d.cdCollectionCount, 0), value: filteredData.reduce((sum, d) => sum + d.cdCollectionValue, 0) },
-    forclosed: { count: filteredData.reduce((sum, d) => sum + d.forclosedCount, 0), value: filteredData.reduce((sum, d) => sum + d.forclosedValue, 0) },
-    redemption: { actual: filteredData.reduce((sum, d) => sum + d.redemptionActual, 0), pending: filteredData.reduce((sum, d) => sum + d.redemptionPending, 0) },
-    reEnrolment: { count: filteredData.reduce((sum, d) => sum + d.reEnrolmentCount, 0), value: filteredData.reduce((sum, d) => sum + d.reEnrolmentValue, 0) },
-    upSale: { count: filteredData.reduce((sum, d) => sum + d.upSaleCount, 0), value: filteredData.reduce((sum, d) => sum + d.upSaleValue, 0) },
-    // Missing metrics added
-    installment: { value: filteredData.reduce((sum, d) => sum + (d.installmentAmount || 0), 0) },
-    expected: { value: filteredData.reduce((sum, d) => sum + (d.expectedInstAmount || 0), 0) },
-    received: { value: filteredData.reduce((sum, d) => sum + (d.currentReceivedAmount || 0), 0) },
-    discount: { value: filteredData.reduce((sum, d) => sum + (d.schemeDiscount || 0), 0) },
-    odPayment: { value: filteredData.reduce((sum, d) => sum + (d.paymentAgainstOverdueValue || 0), 0) },
-    cdPayment: { value: filteredData.reduce((sum, d) => sum + (d.currentDueCollectionValue || 0), 0) },
-    collectionRcvd: { value: filteredData.reduce((sum, d) => sum + (d.collectionReceivedValue || 0), 0) },
-    paidCustomers: { count: filteredData.reduce((sum, d) => sum + (d.paidCustomerCount || 0), 0) },
-  };
+    const dueProfiles = new Set<string>();
+    const employees = new Set<string>();
+    const locations = new Set<string>();
+    
+    const schemeTotals: Record<string, { count: number, value: number }> = {
+      "11+1": { count: 0, value: 0 },
+      "One_Pay": { count: 0, value: 0 },
+      "11+2": { count: 0, value: 0 },
+      "Rate_Shield": { count: 0, value: 0 },
+    };
 
-  const schemeData = [
-    { 
-      name: "11+1", 
-      count: filteredData.filter(d => d.schemeType === "11+1").reduce((sum, item) => sum + item.enrolmentCount, 0),
-      value: filteredData.filter(d => d.schemeType === "11+1").reduce((sum, item) => sum + item.enrolmentValue, 0)
-    },
-    { 
-      name: "One Pay", 
-      count: filteredData.filter(d => d.schemeType === "One_Pay").reduce((sum, item) => sum + item.enrolmentCount, 0),
-      value: filteredData.filter(d => d.schemeType === "One_Pay").reduce((sum, item) => sum + item.enrolmentValue, 0)
-    },
-    { 
-      name: "11+2", 
-      count: filteredData.filter(d => d.schemeType === "11+2").reduce((sum, item) => sum + item.enrolmentCount, 0),
-      value: filteredData.filter(d => d.schemeType === "11+2").reduce((sum, item) => sum + item.enrolmentValue, 0)
-    },
-    { 
-      name: "GP - Rate Shield", 
-      count: filteredData.filter(d => d.schemeType === "Rate_Shield").reduce((sum, item) => sum + item.enrolmentCount, 0),
-      value: filteredData.filter(d => d.schemeType === "Rate_Shield").reduce((sum, item) => sum + item.enrolmentValue, 0)
-    },
-  ].filter(s => s.count > 0);
+    filteredData.forEach(d => {
+      m.enrolment.count += d.enrolmentCount || 0;
+      m.enrolment.value += d.enrolmentValue || 0;
+      m.overdue.count += d.overdueCount || 0;
+      m.overdue.value += d.overdueValue || 0;
+      m.odCollection.count += d.odCollectionCount || 0;
+      m.odCollection.value += d.odCollectionValue || 0;
+      m.currentDue.count += d.currentDueCount || 0;
+      m.currentDue.value += d.currentDueValue || 0;
+      
+      const totalDueVal = d.totalDue || 0;
+      if (totalDueVal > 0) {
+        m.totalDue.count += 1;
+        m.totalDue.value += totalDueVal;
+        const profileId = d.profileNo || d.customerName || d.id;
+        if (profileId) dueProfiles.add(profileId);
+      }
+
+      m.cdCollection.count += d.cdCollectionCount || 0;
+      m.cdCollection.value += d.cdCollectionValue || 0;
+      m.forclosed.count += d.forclosedCount || 0;
+      m.forclosed.value += d.forclosedValue || 0;
+      m.redemption.actual += d.redemptionActual || 0;
+      m.redemption.pending += d.redemptionPending || 0;
+      m.reEnrolment.count += d.reEnrolmentCount || 0;
+      m.reEnrolment.value += d.reEnrolmentValue || 0;
+      m.upSale.count += d.upSaleCount || 0;
+      m.upSale.value += d.upSaleValue || 0;
+      
+      m.installment.value += d.installmentAmount || 0;
+      m.expected.value += d.expectedInstAmount || 0;
+      m.received.value += d.currentReceivedAmount || 0;
+      m.discount.value += d.schemeDiscount || 0;
+      m.odPayment.value += d.paymentAgainstOverdueValue || 0;
+      m.cdPayment.value += d.currentDueCollectionValue || 0;
+      m.collectionRcvd.value += d.collectionReceivedValue || 0;
+      m.paidCustomers.count += d.paidCustomerCount || 0;
+
+      if (d.employeeCode) employees.add(d.employeeCode);
+      if (d.location) locations.add(d.location);
+
+      if (d.schemeType && schemeTotals[d.schemeType]) {
+        schemeTotals[d.schemeType].count += d.enrolmentCount || 0;
+        schemeTotals[d.schemeType].value += d.enrolmentValue || 0;
+      }
+    });
+
+    return {
+      metrics: {
+        ...m,
+        dueCustomers: dueProfiles.size
+      },
+      totalRevenue: m.enrolment.value,
+      totalCount: m.enrolment.count,
+      uniqueEmployees: employees.size,
+      uniqueLocations: locations.size,
+      schemeData: [
+        { name: "11+1", ...schemeTotals["11+1"] },
+        { name: "One Pay", ...schemeTotals["One_Pay"] },
+        { name: "11+2", ...schemeTotals["11+2"] },
+        { name: "GP - Rate Shield", ...schemeTotals["Rate_Shield"] },
+      ].filter(s => s.count > 0)
+    };
+  }, [filteredData]);
+
 
   const handleLocationClick = (locationName: string) => {
     const loc = locationStats.find(l => l.location === locationName);
