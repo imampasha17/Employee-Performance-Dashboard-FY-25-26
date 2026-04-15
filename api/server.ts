@@ -295,11 +295,10 @@ export async function createServer() {
       if (!supabase) {
         return res.json({ success: true, message: "Local mode: No Supabase to clear" });
       }
-      console.log("Starting chunked upload: Clearing old data...");
-      // Inclusive delete filter: handle rows with null/empty location by using multiple criteria
+      // Universal delete filter: 'source' is always present in valid rows
       const { error: deleteError } = await supabase.from('sales')
         .delete()
-        .or('location.neq.___TRUNCATE_HACK___,location.is.null');
+        .not('source', 'is', 'null');
       
       if (deleteError) throw deleteError;
       res.json({ success: true, message: "Table cleared, ready for chunks" });
@@ -338,7 +337,7 @@ export async function createServer() {
       }
       const { error } = await supabase.from('sales')
         .delete()
-        .or('location.neq.___TRUNCATE_HACK___,location.is.null');
+        .not('source', 'is', 'null');
       
       if (error) throw error;
       res.json({ message: "Data cleared successfully" });

@@ -114,7 +114,12 @@ export function parseCSV(csvString: string): ProcessedData[] {
   }
 
   // Handle re-enrollment specific structure if needed
-  const isReEnrollmentFile = csvString.toLowerCase().includes("re-enrollment") || csvString.toLowerCase().includes("re-enrolment");
+  // Check content string AND for a signature pattern (multiple enrollment columns)
+  const enrolmentColCount = normalizedFields.filter(f => f.startsWith("noofenrollment") || f.startsWith("noofenrolment")).length;
+  const isReEnrollmentFile = 
+    csvString.toLowerCase().includes("re-enrollment") || 
+    csvString.toLowerCase().includes("re-enrolment") ||
+    enrolmentColCount > 1;
 
   return headerResults.data
     .filter(row => {

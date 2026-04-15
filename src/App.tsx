@@ -17,7 +17,8 @@ function AppContent() {
   const fetchData = async () => {
     if (!token) return;
     try {
-      const res = await fetch('/api/data', {
+      // Add cache-buster to ensure we get fresh data every time
+      const res = await fetch(`/api/data?t=${Date.now()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
