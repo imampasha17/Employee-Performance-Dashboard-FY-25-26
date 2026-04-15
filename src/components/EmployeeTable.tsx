@@ -63,12 +63,13 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[1300px]">
-          <div className="grid grid-cols-[minmax(200px,1fr)_100px_80px_100px_80px_80px_80px_100px_100px_80px_100px_36px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+        <div className="min-w-[1400px]">
+          <div className="grid grid-cols-[minmax(200px,1fr)_100px_80px_100px_100px_80px_80px_80px_100px_100px_80px_100px_36px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest">
             <div>Employee</div>
             <div>Location</div>
             <div className="text-right">Enrols</div>
             <div className="text-right">Enrol Val</div>
+            <div className="text-right">Inst. Amount</div>
             <div className="text-right">En Cust</div>
             <div className="text-right">Col Cust</div>
             <div className="text-right">Due Cust</div>
@@ -87,7 +88,7 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
                   <button
                     key={`${employee.location}-${employee.employeeCode}`}
                     onClick={() => onEmployeeClick?.(employee)}
-                    className="w-full text-left px-4 py-3 bg-white hover:bg-blue-50/40 transition-colors group grid grid-cols-[minmax(200px,1fr)_100px_80px_100px_80px_80px_80px_100px_100px_80px_100px_36px] gap-3 items-center"
+                    className="w-full text-left px-4 py-3 bg-white hover:bg-blue-50/40 transition-colors group grid grid-cols-[minmax(200px,1fr)_100px_80px_100px_100px_80px_80px_80px_100px_100px_80px_100px_36px] gap-3 items-center"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={cn(
@@ -106,6 +107,7 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
                     <RowValue value={employee.location} />
                     <RowValue value={formatNumber(employee.totalCount)} align="right" />
                     <RowValue value={formatCurrency(employee.totalAmount)} align="right" />
+                    <RowValue value={formatCurrency(employee.installmentAmount)} align="right" />
                     <RowValue value={formatNumber(employee.enrolmentCustomerCount)} align="right" />
                     <RowValue value={formatNumber(employee.collectionCustomerCount)} align="right" />
                     <RowValue value={formatNumber(employee.dueCustomerCount)} tone="rose" align="right" />

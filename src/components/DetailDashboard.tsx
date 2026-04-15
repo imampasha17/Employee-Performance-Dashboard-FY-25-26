@@ -112,6 +112,14 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
       bg: "bg-blue-50",
     },
     {
+      label: "Inst. Amount",
+      value: formatCurrency(data.installmentAmount || 0),
+      subValue: "Total Installment Volume",
+      icon: IndianRupee,
+      color: "text-slate-600",
+      bg: "bg-slate-100",
+    },
+    {
       label: "Total Customers",
       value: formatNumber(totalUniqueCustomers),
       subValue: `${formatNumber(data.enrolmentCustomerCount || 0)} Enrolled • ${formatNumber(data.collectionCustomerCount || 0)} Collection`,

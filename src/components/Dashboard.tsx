@@ -683,9 +683,9 @@ export function Dashboard({
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
                     <StatsCard title="Total Enrolments" value={formatNumber(metrics.enrolment.count)} subValue={formatCurrency(metrics.enrolment.value)} icon={FileSpreadsheet} iconClassName="bg-blue-50 text-blue-600" description="Gross scheme enrolment" />
+                    <StatsCard title="Inst. Amount" value={formatCurrency(metrics.installment.value)} icon={IndianRupee} iconClassName="bg-slate-100 text-slate-600" description="Total installment volume" />
                     <StatsCard title="Re-Enrolment" value={formatNumber(metrics.reEnrolment.count)} subValue={formatCurrency(metrics.reEnrolment.value)} icon={RefreshCw} iconClassName="bg-cyan-50 text-cyan-600" description="Renewed accounts" />
                     <StatsCard title="UP Sale" value={formatNumber(metrics.upSale.count)} subValue={formatCurrency(metrics.upSale.value)} icon={ArrowUpRight} iconClassName="bg-orange-50 text-orange-600" description="Additional sales value" />
-                    <StatsCard title="Inst. Amount" value={formatCurrency(metrics.installment.value)} icon={IndianRupee} iconClassName="bg-slate-100 text-slate-600" description="Total installment volume" />
                     <StatsCard title="Expected Inst." value={formatCurrency(metrics.expected.value)} icon={Calendar} iconClassName="bg-indigo-50 text-indigo-600" description="Expected monthly total" />
                     <StatsCard title="Scheme Discounts" value={formatCurrency(metrics.discount.value)} icon={Shield} iconClassName="bg-amber-50 text-amber-600" description="Total discount given" />
                   </div>

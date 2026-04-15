@@ -64,6 +64,7 @@ export interface EmployeeStat {
   enrolmentCustomerCount: number;
   collectionCustomerCount: number;
   dueCustomerCount: number;
+  installmentAmount: number;
 }
 
 export interface User {
