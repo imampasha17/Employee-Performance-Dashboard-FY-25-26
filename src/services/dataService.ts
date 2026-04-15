@@ -49,7 +49,7 @@ function baseRow(normalized: Map<string, string>, source: ProcessedData["source"
     id: [source, orderNo, profileNo, employeeCode, customerName, Math.random().toString(36).substr(2, 5)].filter(Boolean).join("-"),
     source,
     locationCode: getValue(normalized, ["Location Code", "Store Code", "LOCATION_CODE"]).trim(),
-    location: getValue(normalized, ["Location", "Store Name", "Branch"]).trim(),
+    location: (getValue(normalized, ["Location", "Store Name", "Branch"]).trim()) || "Staff Report",
     employeeCode: String(employeeCode || "").trim(),
     employeeName: getValue(normalized, ["Emp Name", "Employee Name", "Sales Person", "EMP_NAME"]).trim(),
     joiningDate: getValue(normalized, ["Joining Date", "DOJ", "JOINING_DATE"]).trim(),
@@ -144,9 +144,9 @@ export function parseCSV(csvString: string): ProcessedData[] {
 
   return headerResults.data
     .filter(row => {
-      const loc = row["Location"] || row["Store Name"] || row["Branch"] || row["LOCATION_CODE"];
-      const emp = row["Emp Code"] || row["EMP ID"] || row["Employee Code"] || row["EMP_CODE"];
-      return loc && emp;
+      // Make location optional for staff-wise reports (re-enrollment)
+      const emp = row["Emp Code"] || row["EMP ID"] || row["Employee Code"] || row["EMP_CODE"] || row["Emp Name"] || row["Employee Name"];
+      return !!emp;
     })
     .map(row => {
       const normalized = new Map(
