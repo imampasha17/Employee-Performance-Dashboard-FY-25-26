@@ -40,9 +40,9 @@ function AppContent() {
     }
   }, [isAuthenticated, token]);
 
-  const handleFileUpload = async (csvStrings: string[]) => {
+  const handleFileUpload = async (files: { content: string, name: string }[]) => {
     try {
-      const processed = parseCSVFiles(csvStrings);
+      const processed = parseCSVFiles(files);
       if (processed.length === 0) {
         setError("No valid data found in the file. Please check the format.");
         return;

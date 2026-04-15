@@ -16,7 +16,7 @@ import { SchemePerformance } from "./SchemePerformance";
 
 interface DashboardProps {
   data: ProcessedData[];
-  onFileUpload: (csvStrings: string[]) => void;
+  onFileUpload: (files: { content: string, name: string }[]) => void;
   onClearData: () => void;
   user: User;
   onLogout: () => void;
@@ -330,8 +330,11 @@ export function Dashboard({
       return;
     }
 
-    const csvStrings = await Promise.all(csvFiles.map(file => file.text()));
-    onFileUpload(csvStrings);
+    const csvData = await Promise.all(csvFiles.map(async file => ({
+      content: await file.text(),
+      name: file.name
+    })));
+    onFileUpload(csvData);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

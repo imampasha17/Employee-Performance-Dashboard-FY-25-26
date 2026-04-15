@@ -91,11 +91,11 @@ function baseRow(normalized: Map<string, string>, source: ProcessedData["source"
   };
 }
 
-export function parseCSV(csvString: string): ProcessedData[] {
+export function parseCSV(csvString: string, fileName?: string): ProcessedData[] {
   // Pre-process: Find the true header row (it might not be the first row if there's merged categories or metadata)
   const lines = csvString.split(/\r?\n/).filter(line => line.trim() !== "");
   let headerRowIndex = 0;
-  const headerIdentifiers = ["reportdate", "empid", "empname", "noofenrol", "profile", "account"];
+  const headerIdentifiers = ["reportdate", "empid", "empname", "noofenrol", "profile", "account", "grandtotal"];
   
   // Look at first 5 lines for a row with multiple header-like values
   for (let i = 0; i < Math.min(lines.length, 5); i++) {
@@ -137,10 +137,13 @@ export function parseCSV(csvString: string): ProcessedData[] {
   // Handle re-enrollment specific structure if needed
   // Check content string AND for a signature pattern (multiple enrollment columns)
   const enrolmentColCount = normalizedFields.filter(f => f.startsWith("noofenrollment") || f.startsWith("noofenrolment")).length;
+  const hasGrandTotal = normalizedFields.some(f => f.includes("grandtotal"));
+  const fullNameStr = (fileName + " " + csvString).toLowerCase();
   const isReEnrollmentFile = 
-    csvString.toLowerCase().includes("re-enrollment") || 
-    csvString.toLowerCase().includes("re-enrolment") ||
-    enrolmentColCount > 1;
+    fullNameStr.includes("re-enrollment") || 
+    fullNameStr.includes("re-enrolment") ||
+    (enrolmentColCount > 1) ||
+    hasGrandTotal;
 
   return headerResults.data
     .filter(row => {
@@ -193,8 +196,18 @@ export function parseCSV(csvString: string): ProcessedData[] {
         const isUpSale = typeStr.includes("up") || typeStr.includes("sale");
 
         if (isReEnrol) {
-          item.reEnrolmentCount = rawEnrolCount || 1;
-          item.reEnrolmentValue = rawInstAmount || item.installmentAmount || 0;
+          // Priority 1: Explicit Grand Total column
+          // Priority 2: Last found value (usually the rightmost Grand Total column in these reports)
+          const grandTotalCount = cleanNum(getValue(normalized, ["Grand Total Enrollment", "Grand Total No Of Enrollment", "Total Enrollment"]));
+          const grandTotalValue = cleanNum(getValue(normalized, ["Grand Total Value", "Grand Total Installement Amount", "Grand Total Amount"]));
+
+          item.reEnrolmentCount = grandTotalCount || rawEnrolCount || 1;
+          item.reEnrolmentValue = grandTotalValue || rawInstAmount || item.installmentAmount || 0;
+          
+          if (!item.customerName || item.customerName === "-") {
+            item.customerName = "Total Re-Enrolment (Staff Batch)";
+          }
+
           // Re-enrollments are also counted as general enrollments for total volume
           item.enrolmentCount = item.reEnrolmentCount;
           item.enrolmentValue = item.reEnrolmentValue;
@@ -216,8 +229,8 @@ export function parseCSV(csvString: string): ProcessedData[] {
 }
 
 
-export function parseCSVFiles(csvStrings: string[]): ProcessedData[] {
-  return csvStrings.reduce((acc, csv) => acc.concat(parseCSV(csv)), [] as ProcessedData[]);
+export function parseCSVFiles(files: { content: string, name: string }[]): ProcessedData[] {
+  return files.reduce((acc, file) => acc.concat(parseCSV(file.content, file.name)), [] as ProcessedData[]);
 }
 
 export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {
