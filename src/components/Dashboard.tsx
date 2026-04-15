@@ -96,11 +96,13 @@ export function Dashboard({
   const filteredData = useMemo(() => {
     let filtered = data;
     
-    // 1. User/Location Filter
+    // 1. User/Location Filter (Ensure consistency between Admin view and User view)
     if (user.role !== 'admin') {
-      filtered = data.filter(d => user.accessibleLocations.includes(d.location));
+      const allowed = (user.accessibleLocations || []).map(l => l.toLowerCase().trim());
+      filtered = data.filter(d => allowed.includes((d.location || "").toLowerCase().trim()));
     } else if (selectedUser && selectedUser.role !== 'admin') {
-      filtered = data.filter(d => selectedUser.accessibleLocations.includes(d.location));
+      const allowed = (selectedUser.accessibleLocations || []).map(l => l.toLowerCase().trim());
+      filtered = data.filter(d => allowed.includes((d.location || "").toLowerCase().trim()));
     }
 
     if (selectedLocation) {
@@ -684,9 +686,8 @@ export function Dashboard({
                     <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
                     <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Sales & Volume Metrics</h2>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                     <StatsCard title="Total Enrolments" value={formatCurrency(metrics.enrolment.value)} subValue={`${formatNumber(metrics.enrolment.count)} Enrolments`} icon={FileSpreadsheet} iconClassName="bg-blue-50 text-blue-600" description="Gross scheme enrolment" />
-                    <StatsCard title="Inst. Amount" value={formatCurrency(metrics.installment.value)} icon={IndianRupee} iconClassName="bg-slate-100 text-slate-600" description="Total installment volume" />
                     <StatsCard title="Re-Enrolment" value={formatCurrency(metrics.reEnrolment.value)} subValue={`${formatNumber(metrics.reEnrolment.count)} Re-Enrolments`} icon={RefreshCw} iconClassName="bg-cyan-50 text-cyan-600" description="Renewed accounts" />
                     <StatsCard title="UP Sale" value={formatCurrency(metrics.upSale.value)} subValue={`${formatNumber(metrics.upSale.count)} Up Sales`} icon={ArrowUpRight} iconClassName="bg-orange-50 text-orange-600" description="Additional sales value" />
                     <StatsCard title="Expected Inst." value={formatCurrency(metrics.expected.value)} icon={Calendar} iconClassName="bg-indigo-50 text-indigo-600" description="Expected monthly total" />

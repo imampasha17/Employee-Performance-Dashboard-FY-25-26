@@ -221,22 +221,27 @@ export async function createServer() {
         return res.json({ data: [] });
       }
       let query = supabase.from('sales').select('*');
+      const { data, error } = await query;
       
-      // Filter by location if not admin
-      if (req.user.role !== "admin" && req.user.accessibleLocations?.length > 0) {
-        query = query.in('location', req.user.accessibleLocations);
-      }
+      if (error) throw error;
 
       // Disable caching for this endpoint to ensure sync across users
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
 
-      const { data, error } = await query;
-      if (error) throw error;
+      let processedData = data;
+
+      // Filter by location if not admin
+      if (req.user.role !== "admin" && req.user.accessibleLocations?.length > 0) {
+        const allowed = req.user.accessibleLocations.map((l: string) => l.toLowerCase().trim());
+        processedData = data.filter(row => 
+          allowed.includes((row.location || "").toLowerCase().trim())
+        );
+      }
 
       // Map back to camelCase for frontend compatibility
-      const mappedData = data.map(row => ({
+      const mappedData = processedData.map(row => ({
         id: row.id,
         source: row.source,
         locationCode: row.location_code,
