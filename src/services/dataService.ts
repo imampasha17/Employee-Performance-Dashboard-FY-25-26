@@ -92,7 +92,28 @@ function baseRow(normalized: Map<string, string>, source: ProcessedData["source"
 }
 
 export function parseCSV(csvString: string): ProcessedData[] {
-  const headerResults = Papa.parse<Record<string, string>>(csvString, {
+  // Pre-process: Find the true header row (it might not be the first row if there's merged categories or metadata)
+  const lines = csvString.split(/\r?\n/).filter(line => line.trim() !== "");
+  let headerRowIndex = 0;
+  const headerIdentifiers = ["reportdate", "empid", "empname", "noofenrol", "profile", "account"];
+  
+  // Look at first 5 lines for a row with multiple header-like values
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    const normalizedLine = lines[i].toLowerCase().replace(/[^a-z0-9,]+/g, "");
+    let matchCount = 0;
+    for (const id of headerIdentifiers) {
+      if (normalizedLine.includes(id)) matchCount++;
+    }
+    if (matchCount >= 2) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  // Join back from the true header row
+  const effectiveCSV = lines.slice(headerRowIndex).join("\n");
+
+  const headerResults = Papa.parse<Record<string, string>>(effectiveCSV, {
     header: true,
     skipEmptyLines: true,
   });
