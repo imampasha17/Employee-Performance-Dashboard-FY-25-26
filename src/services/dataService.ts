@@ -182,8 +182,7 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
         item.upSaleValue = cleanNum(getValue(normalized, ["UpSale Value"]));
 
         if (item.reEnrolmentCount > 0 && item.enrolmentCount === 0) {
-          item.enrolmentCount = item.reEnrolmentCount;
-          item.enrolmentValue = item.reEnrolmentValue;
+          // Keep enrolmentCount at 0 to isolate standard enrollments
         }
       } else {
         // Enrolment / Re-Enrolment report logic
@@ -207,16 +206,9 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
           if (!item.customerName || item.customerName === "-") {
             item.customerName = "Total Re-Enrolment (Staff Batch)";
           }
-
-          // Re-enrollments are also counted as general enrollments for total volume
-          item.enrolmentCount = item.reEnrolmentCount;
-          item.enrolmentValue = item.reEnrolmentValue;
         } else if (isUpSale) {
           item.upSaleCount = rawEnrolCount || 1;
           item.upSaleValue = rawInstAmount || item.installmentAmount || 0;
-          // Up-sales are also counted as general enrollments for total volume
-          item.enrolmentCount = item.upSaleCount;
-          item.enrolmentValue = item.upSaleValue;
         } else {
           // Standard enrolment
           item.enrolmentCount = rawEnrolCount || 1;
