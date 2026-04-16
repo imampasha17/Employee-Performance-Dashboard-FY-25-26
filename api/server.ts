@@ -303,7 +303,7 @@ export async function createServer() {
       // Universal delete filter: 'source' is always present in valid rows
       const { error: deleteError } = await supabase.from('sales')
         .delete()
-        .not('source', 'is', 'null');
+        .neq('id', '00000000-0000-0000-0000-000000000000');
       
       if (deleteError) throw deleteError;
       res.json({ success: true, message: "Table cleared, ready for chunks" });

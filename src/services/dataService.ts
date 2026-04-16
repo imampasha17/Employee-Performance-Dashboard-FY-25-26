@@ -197,21 +197,24 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
         if (isReEnrol) {
           // Priority 1: Explicit Grand Total column
           // Priority 2: Last found value (usually the rightmost Grand Total column in these reports)
-          const grandTotalCount = cleanNum(getValue(normalized, ["Grand Total Enrollment", "Grand Total No Of Enrollment", "Total Enrollment"]));
-          const grandTotalValue = cleanNum(getValue(normalized, ["Grand Total Value", "Grand Total Installement Amount", "Grand Total Amount"]));
+          const grandTotalCount = getValue(normalized, ["Grand Total Enrollment", "Grand Total No Of Enrollment", "Total Enrollment", "Total Enrollment Count"]);
+          const grandTotalValue = getValue(normalized, ["Grand Total Value", "Grand Total Installement Amount", "Grand Total Amount"]);
 
-          item.reEnrolmentCount = grandTotalCount || rawEnrolCount || 1;
-          item.reEnrolmentValue = grandTotalValue || rawInstAmount || item.installmentAmount || 0;
+          const hasCountColumn = !!(grandTotalCount || getValue(normalized, ["No Of Enrollment", "No.of Enrolment", "Total", "Count", "INST_RECEIVED"]));
+          
+          item.reEnrolmentCount = grandTotalCount ? cleanNum(grandTotalCount) : (hasCountColumn ? rawEnrolCount : 1);
+          item.reEnrolmentValue = grandTotalValue ? cleanNum(grandTotalValue) : (rawInstAmount || item.installmentAmount || 0);
           
           if (!item.customerName || item.customerName === "-") {
             item.customerName = "Total Re-Enrolment (Staff Batch)";
           }
         } else if (isUpSale) {
-          item.upSaleCount = rawEnrolCount || 1;
+          item.upSaleCount = rawEnrolCount;
           item.upSaleValue = rawInstAmount || item.installmentAmount || 0;
         } else {
           // Standard enrolment
-          item.enrolmentCount = rawEnrolCount || 1;
+          const hasCountColumn = !!getValue(normalized, ["No Of Enrollment", "No.of Enrolment", "Total", "Count", "INST_RECEIVED", "NUMBER_OF_INSTALLMENTS"]);
+          item.enrolmentCount = hasCountColumn ? rawEnrolCount : 1;
           item.enrolmentValue = rawInstAmount || item.installmentAmount || 0;
         }
       }
