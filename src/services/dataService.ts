@@ -63,11 +63,11 @@ function baseRow(normalized: Map<string, string>, source: ProcessedData["source"
     currentReceivedAmount: cleanNum(getValue(normalized, ["Current Received Amount", "Current Received Amt", "Received Amt", "CURRENT_RECEIVED_AMT"])),
     totalDue: cleanNum(getValue(normalized, ["Total Due", "Outstanding"])),
     paidCustomerCount: cleanNum(getValue(normalized, ["Paid Cust count", "Paid Customers", "Paid Cust"])),
-    collectionReceivedValue: cleanNum(getValue(normalized, ["Collection Received", "Collection Received Apr-26", "Total Collection"])),
+    collectionReceivedValue: cleanNum(getValue(normalized, ["Collection Received", "Collection Received Apr-26", "Total Collection", "Current Received Amount", "Current Received Amt", "CURRENT_RECEIVED_AMT"])),
     collectionPercent: cleanNum(getValue(normalized, ["Collect %", "Collection %"])),
-    paymentAgainstOverdueValue: cleanNum(getValue(normalized, ["Payment Received Against Over Due", "OD Payment"])),
-    currentDueCollectionValue: cleanNum(getValue(normalized, ["Current Due Against Collection", "CD Payment"])),
-    schemeDiscount: cleanNum(getValue(normalized, ["Scheme Discount", "Discount", "Scheme Discount"])),
+    paymentAgainstOverdueValue: cleanNum(getValue(normalized, ["Payment Received Against Over Due", "OD Payment", "Payment Received Against Over Due"])),
+    currentDueCollectionValue: cleanNum(getValue(normalized, ["Current Due Against Collection", "CD Payment", "Current Due Against Collection"])),
+    schemeDiscount: cleanNum(getValue(normalized, ["Scheme Discount", "Discount"])),
     reportMonth: reportMonth.trim(),
     reportDate: reportDateRaw.trim() || undefined,
     enrolmentCount: 0,
@@ -195,15 +195,9 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
         const isUpSale = typeStr.includes("up") || typeStr.includes("sale");
 
         if (isReEnrol) {
-          // Priority 1: Explicit Grand Total column
-          // Priority 2: Last found value (usually the rightmost Grand Total column in these reports)
-          const grandTotalCount = getValue(normalized, ["Grand Total Enrollment", "Grand Total No Of Enrollment", "Total Enrollment", "Total Enrollment Count"]);
-          const grandTotalValue = getValue(normalized, ["Grand Total Value", "Grand Total Installement Amount", "Grand Total Amount"]);
-
-          const hasCountColumn = !!(grandTotalCount || getValue(normalized, ["No Of Enrollment", "No.of Enrolment", "Total", "Count", "INST_RECEIVED"]));
-          
-          item.reEnrolmentCount = grandTotalCount ? cleanNum(grandTotalCount) : (hasCountColumn ? rawEnrolCount : 1);
-          item.reEnrolmentValue = grandTotalValue ? cleanNum(grandTotalValue) : (rawInstAmount || item.installmentAmount || 0);
+          // USER REQUEST: Count each row as 1 for Re-enrollment to match 53 rows
+          item.reEnrolmentCount = 1;
+          item.reEnrolmentValue = rawInstAmount || item.installmentAmount || 0;
           
           if (!item.customerName || item.customerName === "-") {
             item.customerName = "Total Re-Enrolment (Staff Batch)";
@@ -213,8 +207,8 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
           item.upSaleValue = rawInstAmount || item.installmentAmount || 0;
         } else {
           // Standard enrolment
-          const hasCountColumn = !!getValue(normalized, ["No Of Enrollment", "No.of Enrolment", "Total", "Count", "INST_RECEIVED", "NUMBER_OF_INSTALLMENTS"]);
-          item.enrolmentCount = hasCountColumn ? rawEnrolCount : 1;
+          // USER REQUEST: Count each row as 1 for Enrollment to match 372 rows
+          item.enrolmentCount = 1;
           item.enrolmentValue = rawInstAmount || item.installmentAmount || 0;
         }
       }
@@ -231,21 +225,28 @@ export function parseCSVFiles(files: { content: string, name: string }[]): Proce
 export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {
   const locMap = new Map<string, any>();
   
-  for (const item of data) {
-    const locName = item.location || "Unknown Location";
+  data.forEach(item => {
+    const locName = item.location || "Unknown";
     if (!locMap.has(locName)) {
       locMap.set(locName, {
         location: locName,
         totalCount: 0,
         totalAmount: 0,
-        totalOverdue: 0,
-        totalCollection: 0,
-        employeeCount: 0,
         enrolmentValue: 0,
+        totalOverdue: 0,
         totalDue: 0,
+        totalDueValue: 0,
+        totalCollection: 0,
         totalForclosed: 0,
+        forclosedValue: 0,
         reEnrolmentCount: 0,
         upSaleCount: 0,
+        overdueValue: 0,
+        currentDueValue: 0,
+        paymentAgainstOverdueValue: 0,
+        currentDueCollectionValue: 0,
+        collectionReceivedValue: 0,
+        employeeCount: 0,
         _employees: new Set<string>()
       });
     }
@@ -255,34 +256,37 @@ export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {
     stats.enrolmentValue += item.enrolmentValue || 0;
     stats.totalOverdue += (item.overdueValue || 0) + (item.currentDueValue || 0);
     stats.totalDue += item.totalDue || 0;
+    stats.totalDueValue += item.totalDue || 0;
     stats.totalCollection += item.collectionReceivedValue || 0;
     stats.totalForclosed += item.forclosedCount || 0;
+    stats.forclosedValue += item.forclosedValue || 0;
     stats.reEnrolmentCount += item.reEnrolmentCount || 0;
     stats.upSaleCount += item.upSaleCount || 0;
+    stats.overdueValue += item.overdueValue || 0;
+    stats.currentDueValue += item.currentDueValue || 0;
+    stats.paymentAgainstOverdueValue += item.paymentAgainstOverdueValue || 0;
+    stats.currentDueCollectionValue += item.currentDueCollectionValue || 0;
+    stats.collectionReceivedValue += item.collectionReceivedValue || 0;
     
     if (item.employeeCode) stats._employees.add(item.employeeCode);
     stats.employeeCount = stats._employees.size;
-  }
+  });
   
   return Array.from(locMap.values());
 }
 
 export function getStatsByEmployee(data: ProcessedData[]): EmployeeStat[] {
   const empMap = new Map<string, any>();
-
-  for (const item of data) {
-    const key = item.employeeCode || "unassigned";
+  
+  data.forEach(item => {
+    const key = item.employeeCode || item.employeeName || "Unknown";
     if (!empMap.has(key)) {
       empMap.set(key, {
-        employeeCode: key,
-        employeeName: item.employeeName || "Unknown Employee",
-        location: item.location || "Unknown Location",
+        id: item.employeeCode || "unknown",
+        name: item.employeeName || "Unknown",
+        location: item.location || "Multiple",
         totalCount: 0,
         totalAmount: 0,
-        count11Plus1: 0,
-        count11Plus2: 0,
-        countGpRateShield: 0,
-        countOnePay: 0,
         totalOverdue: 0,
         totalCollection: 0,
         totalRedemption: 0,
@@ -291,15 +295,13 @@ export function getStatsByEmployee(data: ProcessedData[]): EmployeeStat[] {
         installmentAmount: 0,
         expectedInstAmount: 0,
         currentReceivedAmount: 0,
-        currentDueCount: 0,
+        overdueValue: 0,
         currentDueValue: 0,
-        odCollectionValue: 0,
-        cdCollectionValue: 0,
+        paymentAgainstOverdueValue: 0,
+        currentDueCollectionValue: 0,
         collectionReceivedValue: 0,
-        reEnrolmentCount: 0,
-        reEnrolmentValue: 0,
-        upSaleCount: 0,
-        upSaleValue: 0,
+        forclosedValue: 0,
+        redemptionActual: 0,
         redemptionPending: 0,
         dueCustomerCount: 0,
         enrolmentCustomerCount: 0,
@@ -307,7 +309,13 @@ export function getStatsByEmployee(data: ProcessedData[]): EmployeeStat[] {
         customers: [],
         _dueProfiles: new Set<string>(),
         _enrolmentProfiles: new Set<string>(),
-        _collectionProfiles: new Set<string>()
+        _collectionProfiles: new Set<string>(),
+        schemes: {
+          count11Plus1: 0,
+          count11Plus2: 0,
+          countGpRateShield: 0,
+          countOnePay: 0,
+        }
       });
     }
     
@@ -323,36 +331,36 @@ export function getStatsByEmployee(data: ProcessedData[]): EmployeeStat[] {
     stats.installmentAmount += item.installmentAmount || 0;
     stats.expectedInstAmount += item.expectedInstAmount || 0;
     stats.currentReceivedAmount += item.currentReceivedAmount || 0;
-    stats.currentDueCount += item.currentDueCount || 0;
-    stats.currentDueValue += item.currentDueValue || 0;
-    stats.odCollectionValue += item.odCollectionValue || 0;
-    stats.cdCollectionValue += item.cdCollectionValue || 0;
     stats.collectionReceivedValue += item.collectionReceivedValue || 0;
     stats.reEnrolmentCount += item.reEnrolmentCount || 0;
     stats.reEnrolmentValue += item.reEnrolmentValue || 0;
     stats.upSaleCount += item.upSaleCount || 0;
     stats.upSaleValue += item.upSaleValue || 0;
+    stats.overdueValue += item.overdueValue || 0;
+    stats.currentDueValue += item.currentDueValue || 0;
+    stats.paymentAgainstOverdueValue += item.paymentAgainstOverdueValue || 0;
+    stats.currentDueCollectionValue += item.currentDueCollectionValue || 0;
+    stats.forclosedValue += item.forclosedValue || 0;
+    stats.redemptionActual += item.redemptionActual || 0;
     stats.redemptionPending += item.redemptionPending || 0;
     stats.schemeDiscount = (stats.schemeDiscount || 0) + (item.schemeDiscount || 0);
 
-    // Scheme counts
-    if (item.enrolmentCount > 0) {
-      const type = item.schemeType?.toLowerCase() || "";
-      if (type.includes("11+1")) stats.count11Plus1 += item.enrolmentCount;
-      else if (type.includes("11+2")) stats.count11Plus2 += item.enrolmentCount;
-      else if (type.includes("rate") || type.includes("shield")) stats.countGpRateShield += item.enrolmentCount;
-      else if (type.includes("one") || type.includes("pay")) stats.countOnePay += item.enrolmentCount;
-    }
-
     const profileId = item.profileNo || item.customerName || item.id;
-    if ((item.totalDue || 0) > 0) stats._dueProfiles.add(profileId);
-    if (item.source === "enrollment" || item.enrolmentCount > 0) stats._enrolmentProfiles.add(profileId);
-    if (item.source === "dueCollection" || item.collectionReceivedValue > 0) stats._collectionProfiles.add(profileId);
+    if (profileId) {
+      if ((item.totalDue || 0) > 0) stats._dueProfiles.add(profileId);
+      if (item.source === "enrollment" || item.enrolmentCount > 0) stats._enrolmentProfiles.add(profileId);
+      if (item.source === "dueCollection" || item.collectionReceivedValue > 0) stats._collectionProfiles.add(profileId);
+    }
     
+    if (item.schemeType === "11+1") stats.schemes.count11Plus1 += item.enrolmentCount || 0;
+    if (item.schemeType === "11+2") stats.schemes.count11Plus2 += item.enrolmentCount || 0;
+    if (item.schemeType === "Rate_Shield") stats.schemes.countGpRateShield += item.enrolmentCount || 0;
+    if (item.schemeType === "One_Pay") stats.schemes.countOnePay += item.enrolmentCount || 0;
+
     stats.dueCustomerCount = stats._dueProfiles.size;
     stats.enrolmentCustomerCount = stats._enrolmentProfiles.size;
     stats.collectionCustomerCount = stats._collectionProfiles.size;
-  }
+  });
   
   return Array.from(empMap.values());
 }

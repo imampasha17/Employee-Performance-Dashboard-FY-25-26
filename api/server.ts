@@ -92,8 +92,9 @@ export async function createServer() {
   });
 
   const authenticate = async (req: any, res: any, next: any) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
+    const token = authHeader.split(" ")[1];
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
@@ -139,10 +140,8 @@ export async function createServer() {
   app.get("/api/health", (req, res) => {
     res.json({ 
       status: "ok", 
-      mode: "supabase", 
+      mode: supabase ? "supabase" : "local", 
       hasUrl: !!SUPABASE_URL,
-      hasKey: !!SUPABASE_SERVICE_ROLE_KEY,
-      urlPrefix: SUPABASE_URL ? SUPABASE_URL.substring(0, 15) : "none",
       time: new Date().toISOString() 
     });
   });
@@ -150,7 +149,7 @@ export async function createServer() {
   app.post("/api/login", async (req, res) => {
     const { email, password } = req.body;
     try {
-      if (!supabase) {
+      if (!supabase || !SUPABASE_URL) {
         // Fallback for local development if Supabase is not configured
         if (email === "admin@example.com" && password === "admin123") {
           console.log("Using local fallback login");
@@ -158,7 +157,8 @@ export async function createServer() {
             id: "local-admin", 
             email: "admin@example.com", 
             role: "admin", 
-            name: "Local Admin" 
+            name: "Local Admin",
+            accessibleLocations: []
           }, JWT_SECRET);
 
           return res.json({ 
@@ -172,7 +172,7 @@ export async function createServer() {
             } 
           });
         }
-        return res.status(500).json({ message: "Supabase connection not initialized. Check Vercel environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)." });
+        return res.status(401).json({ message: "Invalid credentials (Local Fallback Mode)" });
       }
 
       const { data: users, error } = await supabase
@@ -196,7 +196,8 @@ export async function createServer() {
         id: user.id, 
         email: user.email, 
         role: user.role, 
-        name: user.name 
+        name: user.name,
+        accessibleLocations: user.accessible_locations || []
       }, JWT_SECRET);
 
       res.json({ 

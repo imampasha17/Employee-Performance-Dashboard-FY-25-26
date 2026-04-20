@@ -3,7 +3,7 @@ import {
   X, User, MapPin, Trophy, TrendingUp, PieChart, BarChart3,
   IndianRupee, Users, ArrowUpRight, AlertCircle, Download,
   ChevronUp, ChevronDown, Search, FileText, BookOpen, Wallet,
-  XCircle, RefreshCw, Gift, Zap
+  XCircle, RefreshCw, Gift, Zap, Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { formatCurrency, formatNumber, cn } from "../lib/utils";
@@ -168,12 +168,28 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
       bg: "bg-violet-50",
     },
     {
-      label: "Up Sale Value",
-      value: formatCurrency(data.totalUpSaleValue || 0),
-      subValue: `${formatNumber(data.totalUpSaleCount || 0)} Up Sales`,
-      icon: Zap,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
+      label: "Current Received",
+      value: formatCurrency(data.currentReceivedAmount || 0),
+      subValue: "Current Received Count",
+      icon: IndianRupee,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      label: "Pymt vs OD",
+      value: formatCurrency(data.paymentAgainstOverdueValue || 0),
+      subValue: "Against Overdue",
+      icon: TrendingUp,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      label: "CD Collection",
+      value: formatCurrency(data.currentDueCollectionValue || 0),
+      subValue: "Current Due Collection",
+      icon: Check,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
     },
   ];
 
@@ -183,7 +199,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
     const csvRows = [headers.join(",")];
     for (const row of exportData) {
       const values = headers.map(header => {
-        const val = (row as any)[header];
+        const val = (row as Record<string, any>)[header];
         return `"${String(val ?? "").replace(/"/g, '""')}"`;
       });
       csvRows.push(values.join(","));

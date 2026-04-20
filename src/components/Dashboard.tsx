@@ -171,6 +171,11 @@ export function Dashboard({
       cdPayment: { value: 0 },
       collectionRcvd: { value: 0 },
       paidCustomers: { count: 0 },
+      overdueAmt: { value: 0 },
+      currentDueAmt: { value: 0 },
+      forclosedAmt: { value: 0 },
+      paymentOverdue: { value: 0 },
+      currentDueColl: { value: 0 },
     };
 
     const dueProfiles = new Set<string>();
@@ -221,6 +226,12 @@ export function Dashboard({
       m.cdPayment.value += d.currentDueCollectionValue || 0;
       m.collectionRcvd.value += d.collectionReceivedValue || 0;
       m.paidCustomers.count += d.paidCustomerCount || 0;
+      
+      m.overdueAmt.value += d.overdueValue || 0;
+      m.currentDueAmt.value += d.currentDueValue || 0;
+      m.forclosedAmt.value += d.forclosedValue || 0;
+      m.paymentOverdue.value += d.paymentAgainstOverdueValue || 0;
+      m.currentDueColl.value += d.currentDueCollectionValue || 0;
 
       if (d.employeeCode) employees.add(d.employeeCode);
       if (d.location) locations.add(d.location);
@@ -702,11 +713,10 @@ export function Dashboard({
                     <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Collection Efficiency</h2>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                    <StatsCard title="Total Collected" value={formatCurrency(metrics.collectionRcvd.value)} icon={TrendingUp} iconClassName="bg-emerald-50 text-emerald-600" description="Total realized collection" />
-                    <StatsCard title="OD Collection" value={formatCurrency(metrics.odCollection.value)} subValue={`${formatNumber(metrics.odCollection.count)} Collections`} icon={Check} iconClassName="bg-emerald-50 text-emerald-600" description="Overdue collections" />
-                    <StatsCard title="CD Collection" value={formatCurrency(metrics.cdCollection.value)} subValue={`${formatNumber(metrics.cdCollection.count)} Collections`} icon={LayoutDashboard} iconClassName="bg-emerald-50 text-emerald-600" description="Current due collections" />
-                    <StatsCard title="OD Paid Value" value={formatCurrency(metrics.odPayment.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Payments vs Overdue" />
-                    <StatsCard title="CD Paid Value" value={formatCurrency(metrics.cdPayment.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Current month payments" />
+                    <StatsCard title="Total Collected" value={formatCurrency(metrics.collectionRcvd.value)} icon={TrendingUp} iconClassName="bg-emerald-50 text-emerald-600" description="Sum of Current Received Amount" />
+                    <StatsCard title="Collection Rcvd Apr-26" value={formatCurrency(metrics.collectionRcvd.value)} subValue={`${formatNumber(metrics.odCollection.count + metrics.cdCollection.count)} Collections`} icon={Check} iconClassName="bg-emerald-50 text-emerald-600" description="Monthly realization" />
+                    <StatsCard title="Payment vs Overdue" value={formatCurrency(metrics.paymentOverdue.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Payment Received Against Over Due" />
+                    <StatsCard title="Current Due Collection" value={formatCurrency(metrics.currentDueColl.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Current Due Against Collection" />
                   </div>
                 </div>
 
@@ -717,11 +727,11 @@ export function Dashboard({
                     <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Outstanding & Dues</h2>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                    <StatsCard title="Total Due Value" value={formatCurrency(metrics.totalDue.value)} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Total unpaid amount" />
+                    <StatsCard title="Total Due Value" value={formatCurrency(metrics.totalDue.value)} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Grand Total Due" />
                     <StatsCard title="Total Customers Due" value={formatNumber(metrics.dueCustomers)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Unique customers O/S" />
-                    <StatsCard title="Overdue Pending" value={formatCurrency(metrics.overdue.value)} subValue={`${formatNumber(metrics.overdue.count)} Pending`} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Aged outstanding" />
-                    <StatsCard title="Current Dues" value={formatCurrency(metrics.currentDue.value)} subValue={`${formatNumber(metrics.currentDue.count)} Dues`} icon={Calendar} iconClassName="bg-rose-50 text-rose-600" description="Current month O/S" />
-                    <StatsCard title="Forclosed" value={formatCurrency(metrics.forclosed.value)} subValue={`${formatNumber(metrics.forclosed.count)} Schemes`} icon={Trash2} iconClassName="bg-slate-100 text-slate-600" description="Prematurely closed" />
+                    <StatsCard title="Overdue Pending Amt" value={formatCurrency(metrics.overdueAmt.value)} subValue={`${formatNumber(metrics.overdue.count)} Pending`} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Total Overdue Pending Amount" />
+                    <StatsCard title="Current Due Apr-26" value={formatCurrency(metrics.currentDueAmt.value)} subValue={`${formatNumber(metrics.currentDue.count)} Dues`} icon={Calendar} iconClassName="bg-rose-50 text-rose-600" description="Current month dues" />
+                    <StatsCard title="Foreclosed Amount" value={formatCurrency(metrics.forclosedAmt.value)} subValue={`${formatNumber(metrics.forclosed.count)} Schemes`} icon={Trash2} iconClassName="bg-slate-100 text-slate-600" description="Total Foreclosed Amount" />
                   </div>
                 </div>
 

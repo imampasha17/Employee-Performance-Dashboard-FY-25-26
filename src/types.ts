@@ -65,6 +65,18 @@ export interface EmployeeStat {
   collectionCustomerCount: number;
   dueCustomerCount: number;
   installmentAmount: number;
+  expectedInstAmount: number;
+  currentReceivedAmount: number;
+  overdueValue: number;
+  currentDueValue: number;
+  paymentAgainstOverdueValue: number;
+  currentDueCollectionValue: number;
+  collectionReceivedValue: number;
+  forclosedValue: number;
+  redemptionActual: number;
+  redemptionPending: number;
+  upSaleCount: number;
+  upSaleValue: number;
 }
 
 export interface User {
@@ -94,4 +106,11 @@ export interface LocationStats {
   totalForclosed: number;
   reEnrolmentCount: number;
   upSaleCount: number;
+  totalDueValue: number;
+  overdueValue: number;
+  currentDueValue: number;
+  paymentAgainstOverdueValue: number;
+  currentDueCollectionValue: number;
+  collectionReceivedValue: number;
+  forclosedValue: number;
 }
