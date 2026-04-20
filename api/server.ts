@@ -172,7 +172,7 @@ export async function createServer() {
             } 
           });
         }
-        return res.status(401).json({ message: "Invalid credentials (Local Fallback Mode)" });
+        return res.status(401).json({ message: "Invalid credentials. For local access use: admin@example.com / admin123" });
       }
 
       const { data: users, error } = await supabase

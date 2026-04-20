@@ -61,6 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Invalid credentials. For local access use: admin@example.com / admin123');
+      }
       let errorMessage = 'Login failed';
       try {
         const error = await res.json();
