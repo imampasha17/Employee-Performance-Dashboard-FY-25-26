@@ -161,13 +161,13 @@ export function parseCSV(csvContent: string, fileName?: string): ProcessedData[]
         const odCollectionValue = cleanNum(getValue(normalized, ["Payment Received Against Over Due", "OD Payment"]));
         const cdCollectionValue = cleanNum(getValue(normalized, ["Current Due Against Collection", "CD Payment", "Current Due Against Collection"]));
         
-        const odCount = cleanNum(getValue(normalized, ["Overdue Pending Inst Count", "Overdue Count"]));
+        const odCount = cleanNum(getValue(normalized, ["Overdue Pending Inst", "Overdue Pending Inst Count", "Overdue Count"]));
         const odVal = cleanNum(getValue(normalized, ["Overdue Pending Amount", "Overdue Amt"]));
         item.overdueCount = odCount > 0 ? odCount : (odVal > 0 ? 1 : 0);
         item.overdueValue = odVal;
 
-        const cdCount = cleanNum(getValue(normalized, ["Current Due Inst count", "Dues Count"]));
-        const cdVal = cleanNum(getValue(normalized, ["Current Due", "Current month due"]));
+        const cdCount = cleanNum(getValue(normalized, ["Current Due Apr-26 Inst", "Current Due Inst count", "Dues Count"]));
+        const cdVal = cleanNum(getValue(normalized, ["Current Due Apr-26.", "Current Due", "Current month due"]));
         item.currentDueCount = cdCount > 0 ? cdCount : (cdVal > 0 ? 1 : 0);
         item.currentDueValue = cdVal;
         item.odCollectionCount = odCollectionValue > 0 ? (paidCount || 1) : 0;
@@ -177,7 +177,7 @@ export function parseCSV(csvContent: string, fileName?: string): ProcessedData[]
         
         const rawForeclosed = getValue(normalized, ["Foreclosed", "Foreclosed Count", "Closed Count"]);
         item.forclosedCount = (cleanNum(rawForeclosed) > 0 || String(rawForeclosed).toLowerCase() === 'yes') ? 1 : 0;
-        item.forclosedValue = cleanNum(getValue(normalized, ["Foreclosed Value", "Closed Value", "Foreclosed Amount"]));
+        item.forclosedValue = cleanNum(getValue(normalized, ["Foreclosed Amount.", "Foreclosed Value", "Closed Value", "Foreclosed Amount"]));
         item.redemptionActual = cleanNum(getValue(normalized, ["Redemption Actual", "Redeemed Amt"]));
         item.redemptionPending = cleanNum(getValue(normalized, ["Redemption Pending", "Expected Redemption"]));
         
