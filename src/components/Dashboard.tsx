@@ -27,8 +27,8 @@ interface DashboardProps {
   isUploading?: boolean;
 }
 
-export function Dashboard({ 
-  data, onFileUpload, onClearData, user, onLogout, onRefresh, error, setError, uploadStatus, isUploading 
+export function Dashboard({
+  data, onFileUpload, onClearData, user, onLogout, onRefresh, error, setError, uploadStatus, isUploading
 }: DashboardProps) {
   const { token } = useAuth();
   const [detailData, setDetailData] = useState<any>(null);
@@ -84,7 +84,7 @@ export function Dashboard({
   const accessibleLocations = useMemo(() => {
     if (user.role === 'admin') {
       if (selectedUser) {
-        return selectedUser.role === 'admin' 
+        return selectedUser.role === 'admin'
           ? Array.from(new Set(data.map(d => d.location))).sort()
           : (selectedUser.accessibleLocations || []).sort();
       }
@@ -95,7 +95,7 @@ export function Dashboard({
 
   const filteredData = useMemo(() => {
     let filtered = data;
-    
+
     // 1. User/Location Filter (Ensure consistency between Admin view and User view)
     if (user.role !== 'admin') {
       const allowed = (user.accessibleLocations || []).map(l => l.toLowerCase().trim());
@@ -144,7 +144,7 @@ export function Dashboard({
         return true;
       });
     }
-    
+
     return filtered;
   }, [data, user, selectedUser, selectedLocation, dateFilter, customDateRange]);
 
@@ -181,7 +181,7 @@ export function Dashboard({
     const dueProfiles = new Set<string>();
     const employees = new Set<string>();
     const locations = new Set<string>();
-    
+
     const schemeTotals: Record<string, { count: number, value: number }> = {
       "11+1": { count: 0, value: 0 },
       "One_Pay": { count: 0, value: 0 },
@@ -198,8 +198,8 @@ export function Dashboard({
       m.odCollection.value += d.odCollectionValue || 0;
       m.currentDue.count += d.currentDueCount || 0;
       m.currentDue.value += d.currentDueValue || 0;
-      
-      const totalDueVal = d.totalDue || 0;
+
+      const totalDueVal = d.totalDue || ((d.overdueValue || 0) + (d.currentDueValue || 0));
       if (totalDueVal > 0) {
         m.totalDue.count += 1;
         m.totalDue.value += totalDueVal;
@@ -217,16 +217,16 @@ export function Dashboard({
       m.reEnrolment.value += d.reEnrolmentValue || 0;
       m.upSale.count += d.upSaleCount || 0;
       m.upSale.value += d.upSaleValue || 0;
-      
+
       m.installment.value += d.installmentAmount || 0;
       m.expected.value += d.expectedInstAmount || 0;
       m.received.value += d.currentReceivedAmount || 0;
       m.discount.value += d.schemeDiscount || 0;
       m.odPayment.value += d.paymentAgainstOverdueValue || 0;
       m.cdPayment.value += d.currentDueCollectionValue || 0;
-      m.collectionRcvd.value += d.collectionReceivedValue || 0;
+      m.collectionRcvd.value += (d.odCollectionValue || 0) + (d.cdCollectionValue || 0);
       m.paidCustomers.count += d.paidCustomerCount || 0;
-      
+
       m.overdueAmt.value += d.overdueValue || 0;
       m.currentDueAmt.value += d.currentDueValue || 0;
       m.forclosedAmt.value += d.forclosedValue || 0;
@@ -268,7 +268,7 @@ export function Dashboard({
     if (!loc) return;
 
     const locData = filteredData.filter(d => (d.location || "").toLowerCase() === locationName.toLowerCase());
-    
+
     setDetailData({
       type: "location",
       id: locationName,
@@ -294,8 +294,8 @@ export function Dashboard({
 
   const handleEmployeeClick = (employee: EmployeeStat) => {
     // Filter raw records for this employee
-    const employeeData = filteredData.filter(d => 
-      (d.employeeCode === employee.employeeCode && employee.employeeCode !== "unknown") || 
+    const employeeData = filteredData.filter(d =>
+      (d.employeeCode === employee.employeeCode && employee.employeeCode !== "unknown") ||
       (d.employeeName.toLowerCase() === employee.employeeName.toLowerCase())
     );
 
@@ -386,7 +386,7 @@ export function Dashboard({
                 <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] leading-none mt-1 block">Enterprise Analytics</span>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2 sm:gap-6">
               <div className="hidden md:flex items-center gap-2">
                 <button
@@ -421,7 +421,7 @@ export function Dashboard({
                 >
                   <LogOut className="w-5 h-5" />
                 </button>
-                
+
                 {/* Mobile Menu Toggle */}
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -519,7 +519,7 @@ export function Dashboard({
               <div>
                 <p className="text-sm font-black tracking-tight">{uploadStatus || 'Uploading data...'}</p>
                 <div className="mt-1 h-1.5 w-48 bg-blue-200 rounded-full overflow-hidden">
-                  <motion.div 
+                  <motion.div
                     className="h-full bg-blue-600"
                     initial={{ width: "0%" }}
                     animate={{ width: "100%" }}
@@ -559,8 +559,8 @@ export function Dashboard({
                       FY 2026-27 <span className="text-blue-600">Analytics</span>
                     </h1>
                     <p className="text-xs sm:text-base text-slate-500 max-w-2xl font-medium leading-relaxed">
-                      {user.role === 'admin' 
-                        ? "Complete enterprise visibility across all locations." 
+                      {user.role === 'admin'
+                        ? "Complete enterprise visibility across all locations."
                         : `Performance data for: ${user.accessibleLocations.join(', ')}`}
                     </p>
                   </div>
@@ -652,7 +652,7 @@ export function Dashboard({
                     )}
 
                     {(selectedLocation || selectedUserId || dateFilter !== 'all') && (
-                      <button 
+                      <button
                         onClick={() => {
                           setSelectedLocation("");
                           setSelectedUserId("");
@@ -665,7 +665,7 @@ export function Dashboard({
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   {user.role === 'admin' && (
                     <>
@@ -716,13 +716,13 @@ export function Dashboard({
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                     <StatsCard title="Total Collected" value={formatCurrency(metrics.collectionRcvd.value)} icon={TrendingUp} iconClassName="bg-emerald-50 text-emerald-600" description="Sum of Current Received Amount" />
-                    <StatsCard 
-                      title="Collection Efficiency" 
-                      value={`${((metrics.collectionRcvd.value / (metrics.totalDue.value || 1)) * 100).toFixed(1)}%`} 
-                      subValue={`${formatNumber(metrics.odCollection.count + metrics.cdCollection.count)} Collections`} 
-                      icon={Check} 
-                      iconClassName="bg-emerald-50 text-emerald-600" 
-                      description="Collection vs Total Due" 
+                    <StatsCard
+                      title="Collection Efficiency"
+                      value={`${((metrics.collectionRcvd.value / (metrics.totalDue.value || 1)) * 100).toFixed(1)}%`}
+                      subValue={`${formatNumber(metrics.odCollection.count + metrics.cdCollection.count)} Collections`}
+                      icon={Check}
+                      iconClassName="bg-emerald-50 text-emerald-600"
+                      description="Collection vs Total Due"
                     />
                     <StatsCard title="Payment vs Overdue" value={formatCurrency(metrics.paymentOverdue.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Payment Received Against Over Due" />
                     <StatsCard title="Current Due Collection" value={formatCurrency(metrics.currentDueColl.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Current Due Against Collection" />
@@ -740,12 +740,12 @@ export function Dashboard({
                     <StatsCard title="Total Customers Due" value={formatNumber(metrics.dueCustomers)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Unique customers O/S" />
                     <StatsCard title="Overdue Pending Amt" value={formatCurrency(metrics.overdueAmt.value)} subValue={`${formatNumber(metrics.overdue.count)} Pending`} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Total Overdue Pending Amount" />
                     <StatsCard title="Current Due Apr-26" value={formatCurrency(metrics.currentDueAmt.value)} subValue={`${formatNumber(metrics.currentDue.count)} Dues`} icon={Calendar} iconClassName="bg-rose-50 text-rose-600" description="Current month dues" />
+                    <StatsCard title="Paid Cust Count" value={formatNumber(metrics.paidCustomers.count)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Total paying customers" />
+                    <StatsCard title="Expected Inst Amount" value={formatCurrency(metrics.expected.value)} icon={TrendingUp} iconClassName="bg-rose-50 text-rose-600" description="Total expected installments" />
                     <StatsCard title="Foreclosed Count" value={formatNumber(metrics.forclosed.count)} icon={Trash2} iconClassName="bg-slate-100 text-slate-600" description="Total Foreclosed Accounts" />
                     <StatsCard title="Foreclosed Amount" value={formatCurrency(metrics.forclosedAmt.value)} icon={IndianRupee} iconClassName="bg-slate-100 text-slate-600" description="Total Foreclosed Amount" />
                   </div>
-                </div>
-
-                {/* 4. Strategic Metrics */}
+                </div>                 {/* 4. Strategic Metrics */}
                 <div className="space-y-5">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-6 bg-violet-600 rounded-full" />
@@ -754,28 +754,27 @@ export function Dashboard({
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <StatsCard title="Actual Redemption" value={formatCurrency(metrics.redemption.actual)} icon={Trophy} iconClassName="bg-violet-50 text-violet-600" description="Realized redemptions" />
                     <StatsCard title="Pending Redemption" value={formatCurrency(metrics.redemption.pending)} icon={TrendingUp} iconClassName="bg-violet-50 text-violet-600" description="Expected redemptions" />
-                    <StatsCard title="Paid Cust Count" value={formatNumber(metrics.paidCustomers.count)} icon={Users} iconClassName="bg-blue-50 text-blue-600" description="Total paying customers" />
                     <StatsCard title="Store Workforce" value={uniqueEmployees} icon={Users} iconClassName="bg-teal-50 text-teal-600" description="Active contributors" />
                   </div>
                 </div>
               </div>
 
               {/* Scheme Performance Section - Moved up */}
-              <SchemePerformance 
-                data={schemeData} 
+              <SchemePerformance
+                data={schemeData}
                 title={selectedLocation ? `Scheme Performance: ${selectedLocation}` : "Global Scheme Performance"}
               />
 
               {/* Charts Section */}
               <div className="grid grid-cols-1 gap-6 sm:gap-8">
-                <LocationCharts 
-                  data={locationStats} 
-                  schemeData={schemeData.map(s => ({ name: s.name, value: s.count }))} 
+                <LocationCharts
+                  data={locationStats}
+                  schemeData={schemeData.map(s => ({ name: s.name, value: s.count }))}
                   onLocationClick={handleLocationClick}
                 />
                 <TopPerformers data={employeeStats} />
-                <EmployeeTable 
-                  data={employeeStats} 
+                <EmployeeTable
+                  data={employeeStats}
                   onEmployeeClick={handleEmployeeClick}
                   compact={!!selectedLocation}
                 />
@@ -793,10 +792,9 @@ export function Dashboard({
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
                 className={`
-                  max-w-3xl mx-auto p-8 sm:p-20 rounded-[2rem] sm:rounded-[2.5rem] border-2 border-dashed transition-all duration-500 ${
-                    isDragging 
-                      ? 'border-blue-400 bg-blue-50/50 shadow-2xl shadow-blue-200/50 scale-105' 
-                      : 'border-slate-200 bg-slate-50/50 shadow-xl shadow-slate-200/30'
+                  max-w-3xl mx-auto p-8 sm:p-20 rounded-[2rem] sm:rounded-[2.5rem] border-2 border-dashed transition-all duration-500 ${isDragging
+                    ? 'border-blue-400 bg-blue-50/50 shadow-2xl shadow-blue-200/50 scale-105'
+                    : 'border-slate-200 bg-slate-50/50 shadow-xl shadow-slate-200/30'
                   } cursor-pointer hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-200/50 active:scale-[0.98]
                 `}
               >
@@ -812,12 +810,12 @@ export function Dashboard({
                     <Upload className="w-12 h-12 mx-auto text-slate-400 mb-4 block" />
                     <div className="text-sm font-bold text-slate-600">Click to browse files or drag & drop</div>
                     <div className="text-xs text-slate-400 mt-1">CSV files only (.csv)</div>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept=".csv" 
-                      multiple 
-                      onChange={handleFileChange} 
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".csv"
+                      multiple
+                      onChange={handleFileChange}
                     />
                   </label>
                   {user.role === 'admin' && (

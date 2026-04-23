@@ -289,104 +289,104 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className="fixed inset-0 z-[100] bg-slate-50 flex flex-col overflow-hidden"
         >
-            {/* Full-page sticky top navbar */}
-            <div className="bg-white border-b border-slate-200 flex-shrink-0 z-20">
-              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16 gap-4">
+          {/* Full-page sticky top navbar */}
+          <div className="bg-white border-b border-slate-200 flex-shrink-0 z-20">
+            <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16 gap-4">
 
-                  {/* Back button + identity */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <button
-                      onClick={onClose}
-                      className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all active:scale-95 flex-shrink-0"
-                    >
-                      <ArrowUpRight className="w-4 h-4 rotate-[225deg]" />
-                      <span className="hidden sm:inline">Back</span>
-                    </button>
+                {/* Back button + identity */}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <button
+                    onClick={onClose}
+                    className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all active:scale-95 flex-shrink-0"
+                  >
+                    <ArrowUpRight className="w-4 h-4 rotate-[225deg]" />
+                    <span className="hidden sm:inline">Back</span>
+                  </button>
 
-                    <div className="h-6 w-px bg-slate-200 flex-shrink-0" />
+                  <div className="h-6 w-px bg-slate-200 flex-shrink-0" />
 
-                    <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-lg flex-shrink-0",
-                      data.type === "employee" ? "bg-blue-600 shadow-blue-200" : "bg-emerald-600 shadow-emerald-200"
-                    )}>
-                      {data.type === "employee" ? <User className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h1 className="text-base sm:text-lg font-black text-slate-900 truncate">{data.name}</h1>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest flex-shrink-0",
-                          data.type === "employee" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
-                        )}>{data.type}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-slate-400 font-bold text-[10px]">
-                        {data.location && <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{data.location}</span>}
-                        <span className="flex items-center gap-1"><Trophy className="w-2.5 h-2.5 text-amber-500" />ID: {data.id}</span>
-                        <span className="flex items-center gap-1 text-violet-600 font-black"><Users className="w-2.5 h-2.5" />{totalUniqueCustomers} Customers</span>
-                      </div>
-                    </div>
+                  <div className={cn(
+                    "w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-lg flex-shrink-0",
+                    data.type === "employee" ? "bg-blue-600 shadow-blue-200" : "bg-emerald-600 shadow-emerald-200"
+                  )}>
+                    {data.type === "employee" ? <User className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => downloadCSV(enrolmentCustomers, `${data.name}-enrolments.csv`)}
-                      className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl hover:bg-blue-100 transition-colors"
-                    >
-                      <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Enrols</span>
-                    </button>
-                    <button
-                      onClick={() => downloadCSV(collectionCustomers, `${data.name}-collections.csv`)}
-                      className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl hover:bg-emerald-100 transition-colors"
-                    >
-                      <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Colls</span>
-                    </button>
-                    <button
-                      onClick={() => downloadCSV(reEnrolmentCustomers, `${data.name}-re-enrolments.csv`)}
-                      className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-cyan-50 text-cyan-600 rounded-lg sm:rounded-xl hover:bg-cyan-100 transition-colors"
-                    >
-                      <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Re-Enrols</span>
-                    </button>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-base sm:text-lg font-black text-slate-900 truncate">{data.name}</h1>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest flex-shrink-0",
+                        data.type === "employee" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+                      )}>{data.type}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-400 font-bold text-[10px]">
+                      {data.location && <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{data.location}</span>}
+                      <span className="flex items-center gap-1"><Trophy className="w-2.5 h-2.5 text-amber-500" />ID: {data.id}</span>
+                      <span className="flex items-center gap-1 text-violet-600 font-black"><Users className="w-2.5 h-2.5" />{totalUniqueCustomers} Customers</span>
+                    </div>
                   </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => downloadCSV(enrolmentCustomers, `${data.name}-enrolments.csv`)}
+                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl hover:bg-blue-100 transition-colors"
+                  >
+                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Enrols</span>
+                  </button>
+                  <button
+                    onClick={() => downloadCSV(collectionCustomers, `${data.name}-collections.csv`)}
+                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl hover:bg-emerald-100 transition-colors"
+                  >
+                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Colls</span>
+                  </button>
+                  <button
+                    onClick={() => downloadCSV(reEnrolmentCustomers, `${data.name}-re-enrolments.csv`)}
+                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-cyan-50 text-cyan-600 rounded-lg sm:rounded-xl hover:bg-cyan-100 transition-colors"
+                  >
+                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Re-Enrols</span>
+                  </button>
                 </div>
               </div>
             </div>
+          </div>
 
 
-            {/* Tabs */}
-            <div className="bg-white border-b border-slate-200 flex-shrink-0 z-10">
-              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex gap-1 overflow-x-auto scrollbar-hide no-scrollbar">
-                  {tabs.map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => { setActiveTab(tab.id); setSearch(""); }}
-                      className={cn(
-                        "flex items-center gap-2 px-5 py-4 text-xs font-black uppercase tracking-wide border-b-2 transition-all whitespace-nowrap",
-                        activeTab === tab.id
-                          ? tab.color === "blue" ? "border-blue-500 text-blue-600" : tab.color === "emerald" ? "border-emerald-500 text-emerald-600" : "border-amber-500 text-amber-600"
-                          : "border-transparent text-slate-400 hover:text-slate-700"
-                      )}
-                    >
-                      <tab.icon className="w-3.5 h-3.5" />
-                      {tab.label}
-                      {tab.count > 0 && (
-                        <span className={cn(
-                          "px-1.5 py-0.5 rounded-full text-[9px] font-black",
-                          tab.color === "emerald" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                        )}>{tab.count}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
+          {/* Tabs */}
+          <div className="bg-white border-b border-slate-200 flex-shrink-0 z-10">
+            <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex gap-1 overflow-x-auto scrollbar-hide no-scrollbar">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setSearch(""); }}
+                    className={cn(
+                      "flex items-center gap-2 px-5 py-4 text-xs font-black uppercase tracking-wide border-b-2 transition-all whitespace-nowrap",
+                      activeTab === tab.id
+                        ? tab.color === "blue" ? "border-blue-500 text-blue-600" : tab.color === "emerald" ? "border-emerald-500 text-emerald-600" : "border-amber-500 text-amber-600"
+                        : "border-transparent text-slate-400 hover:text-slate-700"
+                    )}
+                  >
+                    <tab.icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                    {tab.count > 0 && (
+                      <span className={cn(
+                        "px-1.5 py-0.5 rounded-full text-[9px] font-black",
+                        tab.color === "emerald" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                      )}>{tab.count}</span>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
+          </div>
 
-            {/* Scrollable full-page content */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          {/* Scrollable full-page content */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
               <AnimatePresence mode="wait">
                 {activeTab === "overview" && (
                   <motion.div
@@ -948,8 +948,8 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                   </motion.div>
                 )}
               </AnimatePresence>
-              </div>
             </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
