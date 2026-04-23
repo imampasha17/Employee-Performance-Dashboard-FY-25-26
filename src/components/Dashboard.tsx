@@ -199,7 +199,7 @@ export function Dashboard({
       m.currentDue.count += d.currentDueCount || 0;
       m.currentDue.value += d.currentDueValue || 0;
 
-      const totalDueVal = (d.overdueValue || 0) + (d.currentDueValue || 0);
+      const totalDueVal = d.totalDue || 0;
       if (totalDueVal > 0) {
         m.totalDue.count += 1;
         m.totalDue.value += totalDueVal;
