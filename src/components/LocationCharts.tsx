@@ -47,7 +47,7 @@ export function LocationCharts({ data, schemeData, onLocationClick }: LocationCh
         </div>
 
         <div className="h-[300px] sm:h-[450px] w-full">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <ResponsiveContainer width="100%" height="100%" debounce={50}>
             <BarChart
               data={topStores}
               layout="vertical"
@@ -105,7 +105,7 @@ export function LocationCharts({ data, schemeData, onLocationClick }: LocationCh
           <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">Portfolio distribution by scheme</p>
         </div>
         <div className="h-[250px] sm:h-[350px] w-full relative">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <ResponsiveContainer width="100%" height="100%" debounce={50}>
             <PieChart>
               <Pie
                 data={schemeData}

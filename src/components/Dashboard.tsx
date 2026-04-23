@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Users, MapPin, IndianRupee, TrendingUp, Calendar, FileSpreadsheet, LogOut, Shield, Upload, LayoutDashboard, AlertCircle, X, Check, Trophy, ArrowUpRight, User as UserIcon, Trash2, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { ProcessedData, User } from "../types";
-import { getStatsByLocation, getStatsByEmployee } from "../services/dataService";
+import { ProcessedData, User, EmployeeStat } from "../types";
+import { getStatsByLocation, getStatsByEmployee, normalizeSchemeName } from "../services/dataService";
 import { StatsCard } from "./StatsCard";
 import { LocationCharts } from "./LocationCharts";
 import { EmployeeTable } from "./EmployeeTable";
@@ -86,11 +86,11 @@ export function Dashboard({
       if (selectedUser) {
         return selectedUser.role === 'admin' 
           ? Array.from(new Set(data.map(d => d.location))).sort()
-          : selectedUser.accessibleLocations.sort();
+          : (selectedUser.accessibleLocations || []).sort();
       }
       return Array.from(new Set(data.map(d => d.location))).sort();
     }
-    return user.accessibleLocations.sort();
+    return (user.accessibleLocations || []).sort();
   }, [user, data, selectedUser]);
 
   const filteredData = useMemo(() => {
@@ -236,9 +236,10 @@ export function Dashboard({
       if (d.employeeCode) employees.add(d.employeeCode);
       if (d.location) locations.add(d.location);
 
-      if (d.schemeType && schemeTotals[d.schemeType]) {
-        schemeTotals[d.schemeType].count += d.enrolmentCount || 0;
-        schemeTotals[d.schemeType].value += d.enrolmentValue || 0;
+      const normalizedScheme = normalizeSchemeName(d.schemeType || "");
+      if (schemeTotals[normalizedScheme]) {
+        schemeTotals[normalizedScheme].count += d.enrolmentCount || 0;
+        schemeTotals[normalizedScheme].value += d.enrolmentValue || 0;
       }
     });
 
@@ -256,16 +257,17 @@ export function Dashboard({
         { name: "One Pay", ...schemeTotals["One_Pay"] },
         { name: "11+2", ...schemeTotals["11+2"] },
         { name: "GP - Rate Shield", ...schemeTotals["Rate_Shield"] },
-      ].filter(s => s.count > 0)
+      ].filter(s => s.count > 0 || s.value > 0)
     };
   }, [filteredData]);
+
 
 
   const handleLocationClick = (locationName: string) => {
     const loc = locationStats.find(l => l.location === locationName);
     if (!loc) return;
 
-    const locData = data.filter(d => d.location === locationName);
+    const locData = filteredData.filter(d => (d.location || "").toLowerCase() === locationName.toLowerCase());
     
     setDetailData({
       type: "location",
@@ -275,22 +277,28 @@ export function Dashboard({
       totalAmount: loc.totalAmount,
       totalOverdue: loc.totalOverdue,
       totalCollection: loc.totalCollection,
-      totalRedemption: locData.reduce((sum, d) => sum + d.redemptionActual, 0),
+      totalRedemption: locData.reduce((sum, d) => sum + (d.redemptionActual || 0), 0),
       employeeCount: loc.employeeCount,
       customers: locData,
       totalDueCount: new Set(locData.filter(d => (d.totalDue || 0) > 0).map(d => d.profileNo || d.customerName || d.id).filter(Boolean)).size,
-      collectionCustomerCount: new Set(locData.filter(d => d.source !== 'enrollment').map(d => d.profileNo || d.customerName || d.id).filter(Boolean)).size,
+      collectionCustomerCount: new Set(locData.filter(d => (d.collectionReceivedValue || 0) > 0).map(d => d.profileNo || d.customerName || d.id).filter(Boolean)).size,
       schemes: {
-        count11Plus1: locData.filter(d => d.schemeType === "11+1").reduce((sum, d) => sum + d.enrolmentCount, 0),
-        count11Plus2: locData.filter(d => d.schemeType === "11+2").reduce((sum, d) => sum + d.enrolmentCount, 0),
-        countGpRateShield: locData.filter(d => d.schemeType === "Rate_Shield").reduce((sum, d) => sum + d.enrolmentCount, 0),
-        countOnePay: locData.filter(d => d.schemeType === "One_Pay").reduce((sum, d) => sum + d.enrolmentCount, 0),
+        count11Plus1: locData.filter(d => normalizeSchemeName(d.schemeType || "") === "11+1").reduce((sum, d) => sum + (d.enrolmentCount || 0), 0),
+        count11Plus2: locData.filter(d => normalizeSchemeName(d.schemeType || "") === "11+2").reduce((sum, d) => sum + (d.enrolmentCount || 0), 0),
+        countGpRateShield: locData.filter(d => normalizeSchemeName(d.schemeType || "") === "Rate_Shield").reduce((sum, d) => sum + (d.enrolmentCount || 0), 0),
+        countOnePay: locData.filter(d => normalizeSchemeName(d.schemeType || "") === "One_Pay").reduce((sum, d) => sum + (d.enrolmentCount || 0), 0),
       }
     });
     setIsDetailOpen(true);
   };
 
-  const handleEmployeeClick = (employee: any) => {
+  const handleEmployeeClick = (employee: EmployeeStat) => {
+    // Filter raw records for this employee
+    const employeeData = filteredData.filter(d => 
+      (d.employeeCode === employee.employeeCode && employee.employeeCode !== "unknown") || 
+      (d.employeeName.toLowerCase() === employee.employeeName.toLowerCase())
+    );
+
     setDetailData({
       type: "employee",
       id: employee.employeeCode,
@@ -300,15 +308,14 @@ export function Dashboard({
       totalAmount: employee.totalAmount,
       totalOverdue: employee.totalOverdue,
       totalCollection: employee.totalCollection,
-      totalRedemption: employee.totalRedemption,
-      customerCount: employee.customers?.length ?? 0,
+      totalRedemption: employee.redemptionActual || 0,
+      customerCount: employeeData.length,
       enrolmentCustomerCount: employee.enrolmentCustomerCount,
       collectionCustomerCount: employee.collectionCustomerCount,
       dueCustomerCount: employee.dueCustomerCount,
       installmentAmount: employee.installmentAmount,
       expectedInstAmount: employee.expectedInstAmount,
       currentReceivedAmount: employee.currentReceivedAmount,
-      currentDueCount: employee.currentDueCount,
       currentDueValue: employee.currentDueValue,
       totalDueCount: employee.dueCustomerCount,
       totalDue: employee.totalDue,
@@ -318,20 +325,14 @@ export function Dashboard({
       currentDueCollectionValue: employee.currentDueCollectionValue ?? 0,
       foreclosedCount: employee.totalForclosed ?? 0,
       collectionPercent: employee.collectionPercent ?? 0,
-      // New performance fields
-      totalForclosedValue: employee.totalForclosed ?? 0,
+      totalForclosedValue: employee.forclosedValue ?? 0,
       totalReEnrolmentCount: employee.reEnrolmentCount ?? 0,
       totalReEnrolmentValue: employee.reEnrolmentValue ?? 0,
       totalUpSaleCount: employee.upSaleCount ?? 0,
       totalUpSaleValue: employee.upSaleValue ?? 0,
       totalRedemptionPending: employee.redemptionPending ?? 0,
-      customers: employee.customers,
-      schemes: {
-        count11Plus1: employee.count11Plus1,
-        count11Plus2: employee.count11Plus2,
-        countGpRateShield: employee.countGpRateShield,
-        countOnePay: employee.countOnePay,
-      }
+      customers: employeeData,
+      schemes: employee.schemes
     });
     setIsDetailOpen(true);
   };
@@ -486,7 +487,7 @@ export function Dashboard({
         </AnimatePresence>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         <AnimatePresence mode="wait">
           {error && (
             <motion.div
@@ -697,12 +698,13 @@ export function Dashboard({
                     <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
                     <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Sales & Volume Metrics</h2>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                    <StatsCard title="Total Enrolments" value={formatCurrency(metrics.enrolment.value)} subValue={`${formatNumber(metrics.enrolment.count)} Enrolments`} icon={FileSpreadsheet} iconClassName="bg-blue-50 text-blue-600" description="Gross scheme enrolment" />
-                    <StatsCard title="Re-Enrolment" value={formatCurrency(metrics.reEnrolment.value)} subValue={`${formatNumber(metrics.reEnrolment.count)} Re-Enrolments`} icon={RefreshCw} iconClassName="bg-cyan-50 text-cyan-600" description="Renewed accounts" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4">
+                    <StatsCard title="Enrolment Count" value={formatNumber(metrics.enrolment.count)} icon={FileSpreadsheet} iconClassName="bg-blue-50 text-blue-600" description="Total accounts enrolled" />
+                    <StatsCard title="Enrolment Value" value={formatCurrency(metrics.enrolment.value)} icon={IndianRupee} iconClassName="bg-blue-50 text-blue-600" description="Gross scheme enrolment" />
+                    <StatsCard title="Re-Enrollment Count" value={formatNumber(metrics.reEnrolment.count)} icon={RefreshCw} iconClassName="bg-cyan-50 text-cyan-600" description="Renewed accounts count" />
+                    <StatsCard title="Re-Enrollment Value" value={formatCurrency(metrics.reEnrolment.value)} icon={IndianRupee} iconClassName="bg-cyan-50 text-cyan-600" description="Sum of renewal amounts" />
                     <StatsCard title="UP Sale" value={formatCurrency(metrics.upSale.value)} subValue={`${formatNumber(metrics.upSale.count)} Up Sales`} icon={ArrowUpRight} iconClassName="bg-orange-50 text-orange-600" description="Additional sales value" />
                     <StatsCard title="Expected Inst." value={formatCurrency(metrics.expected.value)} icon={Calendar} iconClassName="bg-indigo-50 text-indigo-600" description="Expected monthly total" />
-                    <StatsCard title="Scheme Discounts" value={formatCurrency(metrics.discount.value)} icon={Shield} iconClassName="bg-amber-50 text-amber-600" description="Total discount given" />
                   </div>
                 </div>
 
@@ -712,9 +714,16 @@ export function Dashboard({
                     <div className="w-1.5 h-6 bg-emerald-600 rounded-full" />
                     <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Collection Efficiency</h2>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                     <StatsCard title="Total Collected" value={formatCurrency(metrics.collectionRcvd.value)} icon={TrendingUp} iconClassName="bg-emerald-50 text-emerald-600" description="Sum of Current Received Amount" />
-                    <StatsCard title="Collection Rcvd Apr-26" value={formatCurrency(metrics.collectionRcvd.value)} subValue={`${formatNumber(metrics.odCollection.count + metrics.cdCollection.count)} Collections`} icon={Check} iconClassName="bg-emerald-50 text-emerald-600" description="Monthly realization" />
+                    <StatsCard 
+                      title="Collection Efficiency" 
+                      value={`${((metrics.collectionRcvd.value / (metrics.totalDue.value || 1)) * 100).toFixed(1)}%`} 
+                      subValue={`${formatNumber(metrics.odCollection.count + metrics.cdCollection.count)} Collections`} 
+                      icon={Check} 
+                      iconClassName="bg-emerald-50 text-emerald-600" 
+                      description="Collection vs Total Due" 
+                    />
                     <StatsCard title="Payment vs Overdue" value={formatCurrency(metrics.paymentOverdue.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Payment Received Against Over Due" />
                     <StatsCard title="Current Due Collection" value={formatCurrency(metrics.currentDueColl.value)} icon={IndianRupee} iconClassName="bg-emerald-50 text-emerald-600" description="Current Due Against Collection" />
                   </div>
@@ -726,12 +735,13 @@ export function Dashboard({
                     <div className="w-1.5 h-6 bg-rose-600 rounded-full" />
                     <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Outstanding & Dues</h2>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4">
                     <StatsCard title="Total Due Value" value={formatCurrency(metrics.totalDue.value)} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Grand Total Due" />
                     <StatsCard title="Total Customers Due" value={formatNumber(metrics.dueCustomers)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Unique customers O/S" />
                     <StatsCard title="Overdue Pending Amt" value={formatCurrency(metrics.overdueAmt.value)} subValue={`${formatNumber(metrics.overdue.count)} Pending`} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Total Overdue Pending Amount" />
                     <StatsCard title="Current Due Apr-26" value={formatCurrency(metrics.currentDueAmt.value)} subValue={`${formatNumber(metrics.currentDue.count)} Dues`} icon={Calendar} iconClassName="bg-rose-50 text-rose-600" description="Current month dues" />
-                    <StatsCard title="Foreclosed Amount" value={formatCurrency(metrics.forclosedAmt.value)} subValue={`${formatNumber(metrics.forclosed.count)} Schemes`} icon={Trash2} iconClassName="bg-slate-100 text-slate-600" description="Total Foreclosed Amount" />
+                    <StatsCard title="Foreclosed Count" value={formatNumber(metrics.forclosed.count)} icon={Trash2} iconClassName="bg-slate-100 text-slate-600" description="Total Foreclosed Accounts" />
+                    <StatsCard title="Foreclosed Amount" value={formatCurrency(metrics.forclosedAmt.value)} icon={IndianRupee} iconClassName="bg-slate-100 text-slate-600" description="Total Foreclosed Amount" />
                   </div>
                 </div>
 

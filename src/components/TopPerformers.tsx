@@ -17,7 +17,7 @@ interface TopPerformersProps {
 
 export function TopPerformers({ data }: TopPerformersProps) {
   const top10 = [...data]
-    .sort((a, b) => b.totalCount - a.totalCount)
+    .sort((a, b) => (b.totalCount || 0) - (a.totalCount || 0))
     .slice(0, 10);
 
   return (

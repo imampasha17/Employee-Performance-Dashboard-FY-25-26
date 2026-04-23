@@ -17,13 +17,16 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
     const filtered = query
       ? data.filter(
           item =>
-            item.employeeName.toLowerCase().includes(query) ||
-            item.employeeCode.toLowerCase().includes(query) ||
-            item.location.toLowerCase().includes(query)
+            (item.employeeName || "").toLowerCase().includes(query) ||
+            (item.employeeCode || "").toLowerCase().includes(query) ||
+            (item.location || "").toLowerCase().includes(query)
         )
       : data;
 
-    return [...filtered].sort((a, b) => b.totalAmount - a.totalAmount || a.employeeName.localeCompare(b.employeeName));
+    return [...filtered].sort((a, b) => 
+      (b.totalAmount || 0) - (a.totalAmount || 0) || 
+      (a.employeeName || "").localeCompare(b.employeeName || "")
+    );
   }, [data, searchQuery]);
 
   const top5Ids = useMemo(() => {
@@ -94,8 +97,8 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
                   <MobileStat label="Enrol Value" value={formatCurrency(employee.totalAmount)} />
                   <MobileStat label="Collection" value={formatCurrency(employee.totalCollection)} tone="emerald" />
                   <MobileStat label="Total Due" value={formatCurrency(employee.totalDue)} tone="rose" />
-                  <MobileStat label="Re-Enrol" value={formatNumber(employee.reEnrolmentCount)} tone="emerald" />
-                  <MobileStat label="Re-Enrol Val" value={formatCurrency(employee.reEnrolmentValue)} tone="emerald" />
+                  <MobileStat label="Re-Enrollment Count" value={formatNumber(employee.reEnrolmentCount)} tone="emerald" />
+                  <MobileStat label="Re-Enrollment Value" value={formatCurrency(employee.reEnrolmentValue)} tone="emerald" />
                 </div>
               </button>
             );
@@ -122,8 +125,8 @@ export function EmployeeTable({ data, onEmployeeClick }: EmployeeTableProps) {
             <div className="text-right">Due Cust</div>
             <div className="text-right">Collection</div>
             <div className="text-right">Total Due</div>
-            <div className="text-right">Re-Enrol</div>
-            <div className="text-right">Re-Enrol Val</div>
+            <div className="text-right text-[8px]">Re-Enrol Count</div>
+            <div className="text-right text-[8px]">Re-Enrol Value</div>
             <div />
           </div>
 

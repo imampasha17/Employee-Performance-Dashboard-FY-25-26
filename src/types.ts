@@ -50,10 +50,12 @@ export interface EmployeeStat {
   totalCount: number;
   totalAmount: number;
   // Scheme specific counts
-  count11Plus1: number;
-  count11Plus2: number;
-  countGpRateShield: number;
-  countOnePay: number;
+  schemes: {
+    count11Plus1: number;
+    count11Plus2: number;
+    countGpRateShield: number;
+    countOnePay: number;
+  };
   // New metrics
   totalOverdue: number;
   totalCollection: number;
@@ -77,6 +79,8 @@ export interface EmployeeStat {
   redemptionPending: number;
   upSaleCount: number;
   upSaleValue: number;
+  paidCustomerCount: number;
+  collectionPercent: number;
 }
 
 export interface User {

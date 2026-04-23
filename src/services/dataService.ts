@@ -12,6 +12,18 @@ function normalizeKey(key: string) {
   return key.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
+/**
+ * Normalizes scheme names for consistent grouping and counting across the app.
+ */
+export function normalizeSchemeName(name: string): string {
+  const n = (name || "").toLowerCase().replace(/[^a-z0-9+]/g, "");
+  if (n.includes("11+1") || n.includes("11plus1")) return "11+1";
+  if (n.includes("11+2") || n.includes("11plus2")) return "11+2";
+  if (n.includes("rate_shield") || n.includes("rateshield")) return "Rate_Shield";
+  if (n.includes("one_pay") || n.includes("onepay")) return "One_Pay";
+  return name; // Keep original if no match
+}
+
 function getValue(normalized: Map<string, string>, names: string[]) {
   const normalizedNames = names.map(normalizeKey);
   
@@ -91,11 +103,11 @@ function baseRow(normalized: Map<string, string>, source: ProcessedData["source"
   };
 }
 
-export function parseCSV(csvString: string, fileName?: string): ProcessedData[] {
+export function parseCSV(csvContent: string, fileName?: string): ProcessedData[] {
   // Pre-process: Find the true header row (it might not be the first row if there's merged categories or metadata)
-  const lines = csvString.split(/\r?\n/).filter(line => line.trim() !== "");
+  const lines = csvContent.split(/\r?\n/).filter(line => line.trim() !== "");
   let headerRowIndex = 0;
-  const headerIdentifiers = ["reportdate", "empid", "empname", "noofenrol", "profile", "account", "grandtotal"];
+  const headerIdentifiers = ["reportdate", "empid", "empname", "noofenrol", "profile", "account", "grandtotal", "re-enrollment", "re-enrollement"];
   
   // Look at first 5 lines for a row with multiple header-like values
   for (let i = 0; i < Math.min(lines.length, 5); i++) {
@@ -110,51 +122,38 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
     }
   }
 
-  // Join back from the true header row
-  const effectiveCSV = lines.slice(headerRowIndex).join("\n");
-
-  const headerResults = Papa.parse<Record<string, string>>(effectiveCSV, {
-    header: true,
-    skipEmptyLines: true,
-  });
-
-  const fields = headerResults.meta.fields || [];
-  const normalizedFields = fields.map(normalizeKey);
-
-  // Detect source type more robustly
-  let source: ProcessedData["source"] = "enrollment";
+  // Joint back from the true header row if needed
+  const actualCsvContent = lines.slice(headerRowIndex).join("\n");
+  const { data } = Papa.parse(actualCsvContent, { header: true, skipEmptyLines: true });
   
-  if (normalizedFields.some(f => f.includes("overdue") || f.includes("pending") || f.includes("due"))) {
-    // If it has "due" or "pending", it's likely a due/collection report
-    source = "dueCollection";
-  } else if (normalizedFields.some(f => f === "collectionreceived" || f === "totalcollection" || f === "odpayment" || f === "cdpayment")) {
-    source = "dueCollection";
-  } else if (normalizedFields.some(f => f.includes("enrol") || f.includes("enrolment") || f.includes("enrollment"))) {
-    // If it has enrolment keywords, it's definitely enrollment
-    source = "enrollment";
-  }
+  // Use filename for reliable identification, fallback to header detection
+  const f = (fileName || "").toLowerCase();
+  const isEnrollmentFile = f.includes("enrollment") && !f.includes("re-enrollment") && !f.includes("re-enrolment");
+  const isReEnrollmentFile = f.includes("re-enrollment") || f.includes("re-enrolment");
+  const isDueFile = f.includes("due") || f.includes("consolidate");
 
-  // Handle re-enrollment specific structure if needed
-  // Check content string AND for a signature pattern (multiple enrollment columns)
-  const enrolmentColCount = normalizedFields.filter(f => f.startsWith("noofenrollment") || f.startsWith("noofenrolment")).length;
-  const hasGrandTotal = normalizedFields.some(f => f.includes("grandtotal"));
-  const fullNameStr = (fileName + " " + csvString).toLowerCase();
-  const isReEnrollmentFile = 
-    fullNameStr.includes("re-enrollment") || 
-    fullNameStr.includes("re-enrolment") ||
-    (enrolmentColCount > 1) ||
-    hasGrandTotal;
-
-  return headerResults.data
-    .filter(row => {
+  return data
+    .filter((row: any) => {
       // Make location optional for staff-wise reports (re-enrollment)
       const emp = row["Emp Code"] || row["EMP ID"] || row["Employee Code"] || row["EMP_CODE"] || row["Emp Name"] || row["Employee Name"];
       return !!emp;
     })
     .map(row => {
       const normalized = new Map<string, string>(
-        Object.entries(row).map(([key, value]) => [normalizeKey(key), value as string])
+        Object.entries(row as object).map(([key, value]) => [normalizeKey(key), value as string])
       );
+      
+      const normalizedFields = Array.from(normalized.keys());
+      let source: ProcessedData["source"] = "enrollment";
+      
+      if (isDueFile) {
+        source = "dueCollection";
+      } else if (isReEnrollmentFile) {
+        source = "enrollment"; // Will be flagged as re-enrollment logic later
+      } else if (!isEnrollmentFile && normalizedFields.some(f => f.includes("overdue") || f.includes("pending") || f.includes("due"))) {
+        source = "dueCollection";
+      }
+
       const item = baseRow(normalized, source);
 
       if (source === "dueCollection") {
@@ -171,7 +170,8 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
         item.cdCollectionCount = cdCollectionValue > 0 ? (paidCount || 1) : 0;
         item.cdCollectionValue = cdCollectionValue;
         
-        item.forclosedCount = cleanNum(getValue(normalized, ["Foreclosed Count", "Closed Count"])) > 0 ? 1 : (getValue(normalized, ["Foreclosed"]) === 'Yes' ? 1 : 0);
+        const rawForeclosed = getValue(normalized, ["Foreclosed", "Foreclosed Count", "Closed Count"]);
+        item.forclosedCount = (cleanNum(rawForeclosed) > 0 || String(rawForeclosed).toLowerCase() === 'yes') ? 1 : 0;
         item.forclosedValue = cleanNum(getValue(normalized, ["Foreclosed Value", "Closed Value", "Foreclosed Amount"]));
         item.redemptionActual = cleanNum(getValue(normalized, ["Redemption Actual", "Redeemed Amt"]));
         item.redemptionPending = cleanNum(getValue(normalized, ["Redemption Pending", "Expected Redemption"]));
@@ -180,24 +180,21 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
         item.reEnrolmentValue = cleanNum(getValue(normalized, ["Re-Enrolment Value"]));
         item.upSaleCount = cleanNum(getValue(normalized, ["UpSale Count"])) > 0 ? 1 : 0;
         item.upSaleValue = cleanNum(getValue(normalized, ["UpSale Value"]));
-
-        if (item.reEnrolmentCount > 0 && item.enrolmentCount === 0) {
-          // Keep enrolmentCount at 0 to isolate standard enrollments
-        }
       } else {
-        // Enrolment / Re-Enrolment report logic
-        const rawEnrolCount = cleanNum(getValue(normalized, ["No Of Enrollment", "No.of Enrolment", "Total", "Count", "INST_RECEIVED", "NUMBER_OF_INSTALLMENTS"]));
-        const rawInstAmount = cleanNum(getValue(normalized, ["INSTALLMENT_AMOUNT", "Inst Amount", "Installement Amount", "Inst Amount", "Enrollement Amount", "Installment Amount", "Enrolment Value", "TOTAL_INSTALLMENT_AMOUNT"]));
+        const rawEnrolCount = cleanNum(getValue(normalized, ["Total No Of Re-Enrollment", "No Of Enrollment", "No.of Enrolment", "Total", "Count", "INST_RECEIVED", "NUMBER_OF_INSTALLMENTS"]));
+        const rawInstAmount = cleanNum(getValue(normalized, ["Total Re-Enrollement Installment Amount", "INSTALLMENT_AMOUNT", "Inst Amount", "Installement Amount", "Inst Amount", "Enrollement Amount", "Installment Amount", "Enrolment Value", "TOTAL_INSTALLMENT_AMOUNT"]));
         
-        // Detect if this specific row is a re-enrollment
         const typeStr = (getValue(normalized, ["Is Re-Enrolment", "Type", "Scheme Nature", "SCHEME_NATURE"]) || "").toLowerCase();
-        const isReEnrol = typeStr.includes("re") || typeStr.includes("renew") || isReEnrollmentFile;
+        const hasReEnrolHeader = normalized.has("totalnoofreenrollment") || normalized.has("totalnoofreenrollement");
+        const isReEnrol = typeStr.includes("re") || typeStr.includes("renew") || isReEnrollmentFile || hasReEnrolHeader;
         const isUpSale = typeStr.includes("up") || typeStr.includes("sale");
 
-        if (isReEnrol) {
-          // USER REQUEST: Count each row as 1 for Re-enrollment to match 53 rows
-          item.reEnrolmentCount = 1;
-          item.reEnrolmentValue = rawInstAmount || item.installmentAmount || 0;
+        if (isReEnrollmentFile || isReEnrol) {
+          const rawEnrolCountStr = getValue(normalized, ["Total No Of Re-Enrollment", "No Of Enrollment", "No.of Enrolment", "Total", "Count", "INST_RECEIVED", "NUMBER_OF_INSTALLMENTS"]);
+          const rawInstAmountStr = getValue(normalized, ["Total Re-Enrollement Installment Amount", "INSTALLMENT_AMOUNT", "Inst Amount", "Installement Amount", "Inst Amount", "Enrollement Amount", "Installment Amount", "Enrolment Value", "TOTAL_INSTALLMENT_AMOUNT"]);
+          
+          item.reEnrolmentCount = rawEnrolCountStr !== "" ? cleanNum(rawEnrolCountStr) : 1;
+          item.reEnrolmentValue = rawInstAmountStr !== "" ? cleanNum(rawInstAmountStr) : (item.installmentAmount || 0);
           
           if (!item.customerName || item.customerName === "-") {
             item.customerName = "Total Re-Enrolment (Staff Batch)";
@@ -206,8 +203,6 @@ export function parseCSV(csvString: string, fileName?: string): ProcessedData[] 
           item.upSaleCount = rawEnrolCount;
           item.upSaleValue = rawInstAmount || item.installmentAmount || 0;
         } else {
-          // Standard enrolment
-          // USER REQUEST: Count each row as 1 for Enrollment to match 372 rows
           item.enrolmentCount = 1;
           item.enrolmentValue = rawInstAmount || item.installmentAmount || 0;
         }
@@ -251,8 +246,8 @@ export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {
       });
     }
     const stats = locMap.get(locName);
-    stats.totalCount += item.enrolmentCount || 0;
-    stats.totalAmount += item.enrolmentValue || 0;
+    stats.totalCount += (item.enrolmentCount || 0) + (item.reEnrolmentCount || 0) + (item.upSaleCount || 0);
+    stats.totalAmount += (item.enrolmentValue || 0) + (item.reEnrolmentValue || 0) + (item.upSaleValue || 0);
     stats.enrolmentValue += item.enrolmentValue || 0;
     stats.totalOverdue += (item.overdueValue || 0) + (item.currentDueValue || 0);
     stats.totalDue += item.totalDue || 0;
@@ -282,16 +277,26 @@ export function getStatsByEmployee(data: ProcessedData[]): EmployeeStat[] {
     const key = item.employeeCode || item.employeeName || "Unknown";
     if (!empMap.has(key)) {
       empMap.set(key, {
-        id: item.employeeCode || "unknown",
-        name: item.employeeName || "Unknown",
-        location: item.location || "Multiple",
+        employeeCode: item.employeeCode || "unknown",
+        employeeName: item.employeeName || "Unknown",
+        location: item.location || "Unknown",
+        schemes: {
+          count11Plus1: 0,
+          count11Plus2: 0,
+          countGpRateShield: 0,
+          countOnePay: 0,
+        },
         totalCount: 0,
         totalAmount: 0,
         totalOverdue: 0,
         totalCollection: 0,
-        totalRedemption: 0,
         totalForclosed: 0,
         totalDue: 0,
+        reEnrolmentCount: 0,
+        reEnrolmentValue: 0,
+        enrolmentCustomerCount: 0,
+        collectionCustomerCount: 0,
+        dueCustomerCount: 0,
         installmentAmount: 0,
         expectedInstAmount: 0,
         currentReceivedAmount: 0,
@@ -303,64 +308,62 @@ export function getStatsByEmployee(data: ProcessedData[]): EmployeeStat[] {
         forclosedValue: 0,
         redemptionActual: 0,
         redemptionPending: 0,
-        dueCustomerCount: 0,
-        enrolmentCustomerCount: 0,
-        collectionCustomerCount: 0,
-        customers: [],
-        _dueProfiles: new Set<string>(),
-        _enrolmentProfiles: new Set<string>(),
-        _collectionProfiles: new Set<string>(),
-        schemes: {
-          count11Plus1: 0,
-          count11Plus2: 0,
-          countGpRateShield: 0,
-          countOnePay: 0,
-        }
+        upSaleCount: 0,
+        upSaleValue: 0,
+        paidCustomerCount: 0,
+        collectionPercent: 0,
       });
     }
     
-    const stats = empMap.get(key);
-    stats.customers.push(item);
-    stats.totalCount += item.enrolmentCount || 0;
-    stats.totalAmount += item.enrolmentValue || 0;
-    stats.totalOverdue += (item.overdueValue || 0) + (item.currentDueValue || 0);
-    stats.totalCollection += item.collectionReceivedValue || 0;
-    stats.totalRedemption += item.redemptionActual || 0;
-    stats.totalForclosed += item.forclosedCount || 0;
-    stats.totalDue += item.totalDue || 0;
-    stats.installmentAmount += item.installmentAmount || 0;
-    stats.expectedInstAmount += item.expectedInstAmount || 0;
-    stats.currentReceivedAmount += item.currentReceivedAmount || 0;
-    stats.collectionReceivedValue += item.collectionReceivedValue || 0;
-    stats.reEnrolmentCount += item.reEnrolmentCount || 0;
-    stats.reEnrolmentValue += item.reEnrolmentValue || 0;
-    stats.upSaleCount += item.upSaleCount || 0;
-    stats.upSaleValue += item.upSaleValue || 0;
-    stats.overdueValue += item.overdueValue || 0;
-    stats.currentDueValue += item.currentDueValue || 0;
-    stats.paymentAgainstOverdueValue += item.paymentAgainstOverdueValue || 0;
-    stats.currentDueCollectionValue += item.currentDueCollectionValue || 0;
-    stats.forclosedValue += item.forclosedValue || 0;
-    stats.redemptionActual += item.redemptionActual || 0;
-    stats.redemptionPending += item.redemptionPending || 0;
-    stats.schemeDiscount = (stats.schemeDiscount || 0) + (item.schemeDiscount || 0);
-
-    const profileId = item.profileNo || item.customerName || item.id;
-    if (profileId) {
-      if ((item.totalDue || 0) > 0) stats._dueProfiles.add(profileId);
-      if (item.source === "enrollment" || item.enrolmentCount > 0) stats._enrolmentProfiles.add(profileId);
-      if (item.source === "dueCollection" || item.collectionReceivedValue > 0) stats._collectionProfiles.add(profileId);
+    const stats = empMap.get(key)!;
+    
+    // Increment total counts ONLY for enrollment-related rows
+    const isEnrolRow = (item.enrolmentCount || 0) > 0 || (item.reEnrolmentCount || 0) > 0 || (item.upSaleCount || 0) > 0;
+    if (isEnrolRow) {
+      stats.totalCount = (stats.totalCount || 0) + (item.enrolmentCount || item.reEnrolmentCount || item.upSaleCount || 1);
+      stats.totalAmount = (stats.totalAmount || 0) + (item.enrolmentValue || item.reEnrolmentValue || item.upSaleValue || 0);
     }
     
-    if (item.schemeType === "11+1") stats.schemes.count11Plus1 += item.enrolmentCount || 0;
-    if (item.schemeType === "11+2") stats.schemes.count11Plus2 += item.enrolmentCount || 0;
-    if (item.schemeType === "Rate_Shield") stats.schemes.countGpRateShield += item.enrolmentCount || 0;
-    if (item.schemeType === "One_Pay") stats.schemes.countOnePay += item.enrolmentCount || 0;
+    // Scheme Counting Logic - use unified normalization
+    const normalizedScheme = normalizeSchemeName(item.schemeType || "");
+    if (normalizedScheme === "11+1") stats.schemes.count11Plus1 = (stats.schemes.count11Plus1 || 0) + (item.enrolmentCount || 0);
+    else if (normalizedScheme === "11+2") stats.schemes.count11Plus2 = (stats.schemes.count11Plus2 || 0) + (item.enrolmentCount || 0);
+    else if (normalizedScheme === "Rate_Shield") stats.schemes.countGpRateShield = (stats.schemes.countGpRateShield || 0) + (item.enrolmentCount || 0);
+    else if (normalizedScheme === "One_Pay") stats.schemes.countOnePay = (stats.schemes.countOnePay || 0) + (item.enrolmentCount || 0);
 
-    stats.dueCustomerCount = stats._dueProfiles.size;
-    stats.enrolmentCustomerCount = stats._enrolmentProfiles.size;
-    stats.collectionCustomerCount = stats._collectionProfiles.size;
+    stats.totalOverdue = (stats.totalOverdue || 0) + (item.overdueCount || 0);
+    stats.totalCollection = (stats.totalCollection || 0) + (item.odCollectionCount || item.cdCollectionCount || 0);
+    stats.totalForclosed = (stats.totalForclosed || 0) + (item.forclosedCount || 0);
+    stats.totalDue = (stats.totalDue || 0) + (item.totalDue || 0);
+    stats.reEnrolmentCount = (stats.reEnrolmentCount || 0) + (item.reEnrolmentCount || 0);
+    stats.reEnrolmentValue = (stats.reEnrolmentValue || 0) + (item.reEnrolmentValue || 0);
+    
+    if (item.enrolmentCount > 0) stats.enrolmentCustomerCount = (stats.enrolmentCustomerCount || 0) + 1;
+    if ( (item.cdCollectionCount || 0) > 0 || (item.odCollectionCount || 0) > 0) stats.collectionCustomerCount = (stats.collectionCustomerCount || 0) + 1;
+    if ((item.totalDue || 0) > 0) stats.dueCustomerCount = (stats.dueCustomerCount || 0) + 1;
+
+    stats.installmentAmount = (stats.installmentAmount || 0) + (item.installmentAmount || 0);
+    stats.expectedInstAmount = (stats.expectedInstAmount || 0) + (item.expectedInstAmount || 0);
+    stats.currentReceivedAmount = (stats.currentReceivedAmount || 0) + (item.currentReceivedAmount || 0);
+    stats.overdueValue = (stats.overdueValue || 0) + (item.overdueValue || 0);
+    stats.currentDueValue = (stats.currentDueValue || 0) + (item.currentDueValue || 0);
+    stats.paymentAgainstOverdueValue = (stats.paymentAgainstOverdueValue || 0) + (item.paymentAgainstOverdueValue || 0);
+    stats.currentDueCollectionValue = (stats.currentDueCollectionValue || 0) + (item.currentDueCollectionValue || 0);
+    stats.collectionReceivedValue = (stats.collectionReceivedValue || 0) + (item.collectionReceivedValue || 0);
+    stats.forclosedValue = (stats.forclosedValue || 0) + (item.forclosedValue || 0);
+    stats.redemptionActual = (stats.redemptionActual || 0) + (item.redemptionActual || 0);
+    stats.redemptionPending = (stats.redemptionPending || 0) + (item.redemptionPending || 0);
+    stats.upSaleCount = (stats.upSaleCount || 0) + (item.upSaleCount || 0);
+    stats.upSaleValue = (stats.upSaleValue || 0) + (item.upSaleValue || 0);
+    stats.paidCustomerCount = (stats.paidCustomerCount || 0) + (item.paidCustomerCount || 0);
   });
   
-  return Array.from(empMap.values());
+  const results = Array.from(empMap.values());
+  results.forEach(stats => {
+    if (stats.totalDue > 0) {
+      stats.collectionPercent = (stats.collectionReceivedValue / stats.totalDue) * 100;
+    }
+  });
+  
+  return results;
 }

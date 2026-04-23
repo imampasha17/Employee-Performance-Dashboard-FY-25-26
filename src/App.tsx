@@ -23,7 +23,12 @@ function AppContent() {
       });
       if (res.ok) {
         const json = await res.json();
-        setData(json.data);
+        if (json && Array.isArray(json.data)) {
+          setData(json.data);
+        } else {
+          console.warn("Received non-array data from API:", json);
+          setData([]);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch data", err);

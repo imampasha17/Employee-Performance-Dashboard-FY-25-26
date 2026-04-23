@@ -31,6 +31,18 @@ try {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const LOCAL_DATA_FILE = path.join(__dirname, 'local_data.json');
+let localDataCache: any[] = [];
+
+if (fs.existsSync(LOCAL_DATA_FILE)) {
+  try {
+    localDataCache = JSON.parse(fs.readFileSync(LOCAL_DATA_FILE, 'utf-8'));
+    console.log(`Loaded ${localDataCache.length} records from local cache`);
+  } catch(e) {
+    console.error("Failed to parse local data cache", e);
+  }
+}
+
 // Helper for camelCase to snake_case mapping for Supabase
 function mapRowToSupabase(row: any) {
   return {
@@ -219,19 +231,84 @@ export async function createServer() {
   app.get("/api/data", authenticate, async (req: any, res) => {
     try {
       if (!supabase) {
-        return res.json({ data: [] });
+        let processedData = localDataCache;
+        if (req.user.role !== "admin" && req.user.accessibleLocations?.length > 0) {
+          const allowed = req.user.accessibleLocations.map((l: string) => l.toLowerCase().trim());
+          processedData = localDataCache.filter((row: any) => 
+            allowed.includes((row.location || "").toLowerCase().trim())
+          );
+        }
+        
+        // Map back to camelCase for frontend compatibility
+        const mappedData = processedData.map((row: any) => ({
+          id: row.id,
+          source: row.source,
+          locationCode: row.location_code,
+          location: row.location,
+          employeeCode: row.employee_code,
+          employeeName: row.employee_name,
+          joiningDate: row.joining_date,
+          orderNo: row.order_no,
+          profileNo: row.profile_no,
+          customerName: row.customer_name,
+          schemeType: row.scheme_type,
+          schemeStatus: row.scheme_status,
+          installmentAmount: Number(row.installment_amount),
+          expectedInstAmount: Number(row.expected_inst_amount),
+          currentReceivedAmount: Number(row.current_received_amount),
+          totalDue: Number(row.total_due),
+          paidCustomerCount: Number(row.paid_customer_count),
+          collectionReceivedValue: Number(row.collection_received_value),
+          collectionPercent: Number(row.collection_percent),
+          paymentAgainstOverdueValue: Number(row.payment_against_overdue_value),
+          currentDueCollectionValue: Number(row.current_due_collection_value),
+          schemeDiscount: Number(row.scheme_discount),
+          enrolmentCount: Number(row.enrolment_count),
+          enrolmentValue: Number(row.enrolment_value),
+          overdueCount: Number(row.overdue_count),
+          overdueValue: Number(row.overdue_value),
+          odCollectionCount: Number(row.od_collection_count),
+          odCollectionValue: Number(row.od_collection_value),
+          currentDueCount: Number(row.current_due_count),
+          currentDueValue: Number(row.current_due_value),
+          cdCollectionCount: Number(row.cd_collection_count),
+          cdCollectionValue: Number(row.cd_collection_value),
+          forclosedCount: Number(row.forclosed_count),
+          forclosedValue: Number(row.forclosed_value),
+          redemptionActual: Number(row.redemption_actual),
+          redemptionPending: Number(row.redemption_pending),
+          reEnrolmentCount: Number(row.re_enrolment_count),
+          reEnrolmentValue: Number(row.re_enrolment_value),
+          upSaleCount: Number(row.up_sale_count),
+          upSaleValue: Number(row.up_sale_value)
+        }));
+
+        return res.json({ data: mappedData });
       }
-      let query = supabase.from('sales').select('*');
-      const { data, error } = await query;
-      
-      if (error) throw error;
+      let allData: any[] = [];
+      let start = 0;
+      const step = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase.from('sales').select('*').range(start, start + step - 1);
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allData = allData.concat(data);
+          start += step;
+          if (data.length < step) hasMore = false;
+        } else {
+          hasMore = false;
+        }
+      }
 
       // Disable caching for this endpoint to ensure sync across users
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
 
-      let processedData = data;
+      let processedData = allData;
 
       // Filter by location if not admin
       if (req.user.role !== "admin" && req.user.accessibleLocations?.length > 0) {
@@ -299,7 +376,9 @@ export async function createServer() {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     try {
       if (!supabase) {
-        return res.json({ success: true, message: "Local mode: No Supabase to clear" });
+        localDataCache = [];
+        fs.writeFileSync(LOCAL_DATA_FILE, JSON.stringify(localDataCache));
+        return res.json({ success: true, message: "Local mode: Data cleared locally" });
       }
       // Universal delete filter: 'source' is always present in valid rows
       const { error: deleteError } = await supabase.from('sales')
@@ -322,7 +401,10 @@ export async function createServer() {
 
     try {
       if (!supabase) {
-        return res.json({ success: true, message: `Local mode: ${data.length} records processed locally` });
+        const rows = data.map(mapRowToSupabase);
+        localDataCache.push(...rows);
+        fs.writeFileSync(LOCAL_DATA_FILE, JSON.stringify(localDataCache));
+        return res.json({ success: true, message: `Local mode: ${data.length} records saved locally` });
       }
       const rows = data.map(mapRowToSupabase);
       const { error: insertError } = await supabase.from('sales').insert(rows);
@@ -339,7 +421,9 @@ export async function createServer() {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
     try {
       if (!supabase) {
-        return res.json({ message: "Local mode: No Supabase to clear" });
+        localDataCache = [];
+        fs.writeFileSync(LOCAL_DATA_FILE, JSON.stringify(localDataCache));
+        return res.json({ message: "Local mode: Data cleared successfully" });
       }
       const { error } = await supabase.from('sales')
         .delete()

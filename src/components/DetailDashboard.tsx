@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { formatCurrency, formatNumber, cn } from "../lib/utils";
 import { ProcessedData } from "../types";
+import { normalizeSchemeName } from "../services/dataService";
 import {
   BarChart,
   Bar,
@@ -87,26 +88,36 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
   if (!data) return null;
 
   const customers = data.customers || [];
-  const enrolmentCustomers = customers.filter(c => c.source === "enrollment" || c.enrolmentCount > 0);
-  const collectionCustomers = customers.filter(c => c.source !== "enrollment");
-  const reEnrolmentCustomers = customers.filter(c => c.reEnrolmentCount > 0);
+  const enrolmentCustomers = customers.filter(c => (c.enrolmentCount || 0) > 0);
+  const reEnrolmentCustomers = customers.filter(c => (c.reEnrolmentCount || 0) > 0);
+  const collectionCustomers = customers.filter(c => c.source === "dueCollection");
 
   // Unique customers by profile/name
   const uniqueCustomerIds = new Set(customers.map(c => c.profileNo || c.customerName || c.id).filter(Boolean));
   const totalUniqueCustomers = uniqueCustomerIds.size;
 
+  const schemes = data.schemes || { count11Plus1: 0, count11Plus2: 0, countGpRateShield: 0, countOnePay: 0 };
+
   const schemeChartData = [
-    { name: "11+1", value: data.schemes.count11Plus1, color: COLORS[0] },
-    { name: "One Pay", value: data.schemes.countOnePay, color: COLORS[1] },
-    { name: "11+2", value: data.schemes.count11Plus2, color: COLORS[2] },
-    { name: "GP Rate", value: data.schemes.countGpRateShield, color: COLORS[3] },
+    { name: "11+1", value: schemes.count11Plus1 || 0, color: COLORS[0] },
+    { name: "One Pay", value: schemes.countOnePay || 0, color: COLORS[1] },
+    { name: "11+2", value: schemes.count11Plus2 || 0, color: COLORS[2] },
+    { name: "GP Rate", value: schemes.countGpRateShield || 0, color: COLORS[3] },
   ].filter(s => s.value > 0);
 
   const stats = [
     {
+      label: "Enrolment Count",
+      value: formatNumber(data.totalCount),
+      subValue: "Total Enrolment Count",
+      icon: FileText,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
       label: "Enrolment Value",
       value: formatCurrency(data.totalAmount),
-      subValue: `${formatNumber(data.totalCount)} Enrolments`,
+      subValue: "Total Enrolment Value",
       icon: FileText,
       color: "text-blue-600",
       bg: "bg-blue-50",
@@ -144,18 +155,34 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
       bg: "bg-emerald-50",
     },
     {
-      label: "Forclosed Val.",
-      value: formatCurrency(data.totalForclosedValue || 0),
-      subValue: `${formatNumber(data.foreclosedCount || 0)} Schemes`,
+      label: "Foreclosed Count",
+      value: formatNumber(data.foreclosedCount || 0),
+      subValue: "Total Foreclosed Accounts",
       icon: XCircle,
       color: "text-slate-600",
       bg: "bg-slate-100",
     },
     {
-      label: "Re-Enrolled Val.",
-      value: formatCurrency(data.totalReEnrolmentValue || 0),
-      subValue: `${formatNumber(data.totalReEnrolmentCount || 0)} Re-Enrolments`,
+      label: "Foreclosed Val.",
+      value: formatCurrency(data.totalForclosedValue || 0),
+      subValue: "Total Foreclosed Amount",
+      icon: XCircle,
+      color: "text-slate-600",
+      bg: "bg-slate-100",
+    },
+    {
+      label: "Re-Enrollment Count",
+      value: formatNumber(data.totalReEnrolmentCount || 0),
+      subValue: "Total Renewal Count",
       icon: RefreshCw,
+      color: "text-cyan-600",
+      bg: "bg-cyan-50",
+    },
+    {
+      label: "Re-Enrollment Value",
+      value: formatCurrency(data.totalReEnrolmentValue || 0),
+      subValue: "Total Renewal Installment Volume",
+      icon: IndianRupee,
       color: "text-cyan-600",
       bg: "bg-cyan-50",
     },
@@ -198,8 +225,8 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
     const headers = Array.from(new Set(exportData.reduce((acc, row) => acc.concat(Object.keys(row || {})), [] as string[])));
     const csvRows = [headers.join(",")];
     for (const row of exportData) {
-      const values = headers.map(header => {
-        const val = (row as Record<string, any>)[header];
+      const values = headers.map((header: string) => {
+        const val = (row as any)[header];
         return `"${String(val ?? "").replace(/"/g, '""')}"`;
       });
       csvRows.push(values.join(","));
@@ -264,7 +291,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
         >
             {/* Full-page sticky top navbar */}
             <div className="bg-white border-b border-slate-200 flex-shrink-0 z-20">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16 gap-4">
 
                   {/* Back button + identity */}
@@ -330,7 +357,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
 
             {/* Tabs */}
             <div className="bg-white border-b border-slate-200 flex-shrink-0 z-10">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex gap-1 overflow-x-auto scrollbar-hide no-scrollbar">
                   {tabs.map(tab => (
                     <button
@@ -359,7 +386,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
 
             {/* Scrollable full-page content */}
             <div className="flex-1 overflow-y-auto min-h-0">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+              <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
               <AnimatePresence mode="wait">
                 {activeTab === "overview" && (
                   <motion.div
@@ -370,7 +397,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                     className="space-y-6"
                   >
                     {/* Stats Grid — 4 primary + 4 performance */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4">
                       {stats.map((stat, idx) => (
                         <motion.div
                           initial={{ opacity: 0, y: 20 }}
@@ -404,8 +431,8 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                           </div>
                           <BarChart3 className="w-4 h-4 text-slate-300" />
                         </div>
-                        <div className="h-[200px] w-full">
-                          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <div className="h-[240px] w-full min-h-[240px]">
+                          <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <BarChart data={schemeChartData}>
                               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 9, fontWeight: 700 }} />
@@ -429,10 +456,10 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                           </div>
                           <PieChart className="w-4 h-4 text-slate-300" />
                         </div>
-                        <div className="h-[200px] w-full relative">
-                          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <div className="h-[240px] w-full relative min-h-[240px]">
+                          <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <RePieChart>
-                              <Pie data={schemeChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={6} dataKey="value" stroke="none">
+                              <Pie data={schemeChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={6} dataKey="value" stroke="none">
                                 {schemeChartData.map((entry, index) => (
                                   <ReCell key={`cell-${index}`} fill={entry.color} />
                                 ))}
@@ -725,11 +752,11 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="bg-cyan-50 rounded-xl p-3 text-center border border-cyan-100">
                         <div className="text-xl font-black text-cyan-700">{reEnrolmentCustomers.length}</div>
-                        <div className="text-[10px] font-bold text-cyan-500 uppercase tracking-wider">Total Records</div>
+                        <div className="text-[10px] font-bold text-cyan-500 uppercase tracking-wider">Re-Enrollment Count</div>
                       </div>
                       <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
                         <div className="text-xl font-black text-emerald-700">{formatCurrency(reEnrolmentCustomers.reduce((s, c) => s + (c.reEnrolmentValue || 0), 0))}</div>
-                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Total Re-Enrol Val</div>
+                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Re-Enrollment Value</div>
                       </div>
                       <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
                         <div className="text-xl font-black text-blue-700">{formatCurrency(reEnrolmentCustomers.reduce((s, c) => s + (c.installmentAmount || 0), 0))}</div>
