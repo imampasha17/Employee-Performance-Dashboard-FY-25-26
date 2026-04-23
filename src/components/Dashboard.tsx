@@ -246,7 +246,7 @@ export function Dashboard({
     return {
       metrics: {
         ...m,
-        dueCustomers: dueProfiles.size
+        dueCustomers: m.totalDue.count
       },
       totalRevenue: m.enrolment.value,
       totalCount: m.enrolment.count,
@@ -737,7 +737,7 @@ export function Dashboard({
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4">
                     <StatsCard title="Total Due Value" value={formatCurrency(metrics.totalDue.value)} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Grand Total Due" />
-                    <StatsCard title="Total Customers Due" value={formatNumber(metrics.dueCustomers)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Unique customers O/S" />
+                    <StatsCard title="Total Customers Due" value={formatNumber(metrics.dueCustomers)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Total entries O/S" />
                     <StatsCard title="Overdue Pending Amt" value={formatCurrency(metrics.overdueAmt.value)} subValue={`${formatNumber(metrics.overdue.count)} Pending`} icon={AlertCircle} iconClassName="bg-rose-50 text-rose-600" description="Total Overdue Pending Amount" />
                     <StatsCard title="Current Due Apr-26" value={formatCurrency(metrics.currentDueAmt.value)} subValue={`${formatNumber(metrics.currentDue.count)} Dues`} icon={Calendar} iconClassName="bg-rose-50 text-rose-600" description="Current month dues" />
                     <StatsCard title="Paid Cust Count" value={formatNumber(metrics.paidCustomers.count)} icon={Users} iconClassName="bg-rose-50 text-rose-600" description="Total paying customers" />
