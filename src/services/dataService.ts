@@ -369,9 +369,8 @@ export function parseCSV(csvContent: string, fileName?: string): ProcessedData[]
             'TOTAL_INSTALLMENT_AMOUNT',
           ]);
 
-          item.reEnrolmentCount = rawEnrolCountStr !== '' ? cleanNum(rawEnrolCountStr) : 1;
-          item.reEnrolmentValue =
-            rawInstAmountStr !== '' ? cleanNum(rawInstAmountStr) : item.installmentAmount || 0;
+          item.reEnrolmentCount = cleanNum(rawEnrolCountStr) || 1;
+          item.reEnrolmentValue = cleanNum(rawInstAmountStr) || item.installmentAmount || 0;
 
           if (!item.customerName || item.customerName === '-') {
             item.customerName = 'Total Re-Enrolment (Staff Batch)';
@@ -451,7 +450,9 @@ export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {
         totalForclosed: 0,
         forclosedValue: 0,
         reEnrolmentCount: 0,
+        reEnrolmentValue: 0,
         upSaleCount: 0,
+        upSaleValue: 0,
         overdueValue: 0,
         currentDueValue: 0,
         paymentAgainstOverdueValue: 0,
@@ -462,10 +463,8 @@ export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {
       });
     }
     const stats = locMap.get(locName);
-    stats.totalCount +=
-      (item.enrolmentCount || 0) + (item.reEnrolmentCount || 0) + (item.upSaleCount || 0);
-    stats.totalAmount +=
-      (item.enrolmentValue || 0) + (item.reEnrolmentValue || 0) + (item.upSaleValue || 0);
+    stats.totalCount += (item.enrolmentCount || 0) + (item.reEnrolmentCount || 0) + (item.upSaleCount || 0);
+    stats.totalAmount += (item.enrolmentValue || 0) + (item.reEnrolmentValue || 0) + (item.upSaleValue || 0);
     stats.enrolmentValue += item.enrolmentValue || 0;
     stats.totalOverdue += (item.overdueValue || 0) + (item.currentDueValue || 0);
     stats.totalDue += item.totalDue || 0;
@@ -477,6 +476,7 @@ export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {
     stats.reEnrolmentValue += item.reEnrolmentValue || 0;
     stats.upSaleCount += item.upSaleCount || 0;
     stats.upSaleValue += item.upSaleValue || 0;
+    stats.overdueValue += item.overdueValue || 0;
     stats.currentDueValue += item.currentDueValue || 0;
     stats.paymentAgainstOverdueValue += item.paymentAgainstOverdueValue || 0;
     stats.currentDueCollectionValue += item.currentDueCollectionValue || 0;
