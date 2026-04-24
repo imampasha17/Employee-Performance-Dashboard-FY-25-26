@@ -1,14 +1,33 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
-  X, User, MapPin, Trophy, TrendingUp, PieChart, BarChart3,
-  IndianRupee, Users, ArrowUpRight, AlertCircle, Download,
-  ChevronUp, ChevronDown, Search, FileText, BookOpen, Wallet,
-  XCircle, RefreshCw, Gift, Zap, Check
-} from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { formatCurrency, formatNumber, cn } from "../lib/utils";
-import { ProcessedData } from "../types";
-import { normalizeSchemeName } from "../services/dataService";
+  X,
+  User,
+  MapPin,
+  Trophy,
+  TrendingUp,
+  PieChart,
+  BarChart3,
+  IndianRupee,
+  Users,
+  ArrowUpRight,
+  AlertCircle,
+  Download,
+  ChevronUp,
+  ChevronDown,
+  Search,
+  FileText,
+  BookOpen,
+  Wallet,
+  XCircle,
+  RefreshCw,
+  Gift,
+  Zap,
+  Check,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { formatCurrency, formatNumber, cn } from '../lib/utils';
+import { ProcessedData } from '../types';
+import { normalizeSchemeName } from '../services/dataService';
 import {
   BarChart,
   Bar,
@@ -20,11 +39,11 @@ import {
   Cell,
   PieChart as RePieChart,
   Pie,
-  Cell as ReCell
-} from "recharts";
+  Cell as ReCell,
+} from 'recharts';
 
 interface DetailData {
-  type: "employee" | "location";
+  type: 'employee' | 'location';
   id: string;
   name: string;
   location?: string;
@@ -73,209 +92,256 @@ interface DetailDashboardProps {
   data: DetailData | null;
 }
 
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
-type Tab = "overview" | "enrollment" | "collection" | "re-enrollment" | "master";
-type SortKey = "customerName" | "installmentAmount" | "totalDue" | "collectionReceivedValue" | "schemeType";
-type SortDir = "asc" | "desc";
+type Tab = 'overview' | 'enrollment' | 'collection' | 're-enrollment' | 'master';
+type SortKey =
+  | 'customerName'
+  | 'installmentAmount'
+  | 'totalDue'
+  | 'collectionReceivedValue'
+  | 'schemeType';
+type SortDir = 'asc' | 'desc';
 
 export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("customerName");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('customerName');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   if (!data) return null;
 
   const customers = data.customers || [];
-  const enrolmentCustomers = customers.filter(c => (c.enrolmentCount || 0) > 0);
-  const reEnrolmentCustomers = customers.filter(c => (c.reEnrolmentCount || 0) > 0);
-  const collectionCustomers = customers.filter(c => c.source === "dueCollection");
+  const enrolmentCustomers = customers.filter((c) => (c.enrolmentCount || 0) > 0);
+  const reEnrolmentCustomers = customers.filter((c) => (c.reEnrolmentCount || 0) > 0);
+  const collectionCustomers = customers.filter((c) => c.source === 'dueCollection');
 
   // Unique customers by profile/name
-  const uniqueCustomerIds = new Set(customers.map(c => c.profileNo || c.customerName || c.id).filter(Boolean));
+  const uniqueCustomerIds = new Set(
+    customers.map((c) => c.profileNo || c.customerName || c.id).filter(Boolean),
+  );
   const totalUniqueCustomers = uniqueCustomerIds.size;
 
-  const schemes = data.schemes || { count11Plus1: 0, count11Plus2: 0, countGpRateShield: 0, countOnePay: 0 };
+  const schemes = data.schemes || {
+    count11Plus1: 0,
+    count11Plus2: 0,
+    countGpRateShield: 0,
+    countOnePay: 0,
+  };
 
   const schemeChartData = [
-    { name: "11+1", value: schemes.count11Plus1 || 0, color: COLORS[0] },
-    { name: "One Pay", value: schemes.countOnePay || 0, color: COLORS[1] },
-    { name: "11+2", value: schemes.count11Plus2 || 0, color: COLORS[2] },
-    { name: "GP Rate", value: schemes.countGpRateShield || 0, color: COLORS[3] },
-  ].filter(s => s.value > 0);
+    { name: '11+1', value: schemes.count11Plus1 || 0, color: COLORS[0] },
+    { name: 'One Pay', value: schemes.countOnePay || 0, color: COLORS[1] },
+    { name: '11+2', value: schemes.count11Plus2 || 0, color: COLORS[2] },
+    { name: 'GP Rate', value: schemes.countGpRateShield || 0, color: COLORS[3] },
+  ].filter((s) => s.value > 0);
 
   const stats = [
     {
-      label: "Enrolment Count",
+      label: 'Enrolment Count',
       value: formatNumber(data.totalCount),
-      subValue: "Total Enrolment Count",
+      subValue: 'Total Enrolment Count',
       icon: FileText,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
     },
     {
-      label: "Enrolment Value",
+      label: 'Enrolment Value',
       value: formatCurrency(data.totalAmount),
-      subValue: "Total Enrolment Value",
+      subValue: 'Total Enrolment Value',
       icon: FileText,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
     },
     {
-      label: "Inst. Amount",
+      label: 'Inst. Amount',
       value: formatCurrency(data.installmentAmount || 0),
-      subValue: "Total Installment Volume",
+      subValue: 'Total Installment Volume',
       icon: IndianRupee,
-      color: "text-slate-600",
-      bg: "bg-slate-100",
+      color: 'text-slate-600',
+      bg: 'bg-slate-100',
     },
     {
-      label: "Total Customers",
+      label: 'Total Customers',
       value: formatNumber(totalUniqueCustomers),
       subValue: `${formatNumber(data.enrolmentCustomerCount || 0)} Enrolled • ${formatNumber(data.collectionCustomerCount || 0)} Collection`,
       icon: Users,
-      color: "text-violet-600",
-      bg: "bg-violet-50",
+      color: 'text-violet-600',
+      bg: 'bg-violet-50',
     },
     {
-      label: "Due / Overdue",
+      label: 'Due / Overdue',
       value: formatCurrency(data.totalOverdue),
       subValue: `${formatNumber(data.totalDueCount || 0)} Due Customers`,
       icon: AlertCircle,
-      color: "text-rose-600",
-      bg: "bg-rose-50",
+      color: 'text-rose-600',
+      bg: 'bg-rose-50',
     },
     {
-      label: "Collection Value",
+      label: 'Collection Value',
       value: formatCurrency(data.totalCollection),
       subValue: `${formatNumber(data.collectionCustomerCount || 0)} Collections`,
       icon: TrendingUp,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
     },
     {
-      label: "Foreclosed Count",
+      label: 'Foreclosed Count',
       value: formatNumber(data.foreclosedCount || 0),
-      subValue: "Total Foreclosed Accounts",
+      subValue: 'Total Foreclosed Accounts',
       icon: XCircle,
-      color: "text-slate-600",
-      bg: "bg-slate-100",
+      color: 'text-slate-600',
+      bg: 'bg-slate-100',
     },
     {
-      label: "Foreclosed Val.",
+      label: 'Foreclosed Val.',
       value: formatCurrency(data.totalForclosedValue || 0),
-      subValue: "Total Foreclosed Amount",
+      subValue: 'Total Foreclosed Amount',
       icon: XCircle,
-      color: "text-slate-600",
-      bg: "bg-slate-100",
+      color: 'text-slate-600',
+      bg: 'bg-slate-100',
     },
     {
-      label: "Re-Enrollment Count",
+      label: 'Re-Enrollment Count',
       value: formatNumber(data.totalReEnrolmentCount || 0),
-      subValue: "Total Renewal Count",
+      subValue: 'Total Renewal Count',
       icon: RefreshCw,
-      color: "text-cyan-600",
-      bg: "bg-cyan-50",
+      color: 'text-cyan-600',
+      bg: 'bg-cyan-50',
     },
     {
-      label: "Re-Enrollment Value",
+      label: 'Re-Enrollment Value',
       value: formatCurrency(data.totalReEnrolmentValue || 0),
-      subValue: "Total Renewal Installment Volume",
+      subValue: 'Total Renewal Installment Volume',
       icon: IndianRupee,
-      color: "text-cyan-600",
-      bg: "bg-cyan-50",
+      color: 'text-cyan-600',
+      bg: 'bg-cyan-50',
     },
     {
-      label: "Redemption",
+      label: 'Redemption',
       value: formatCurrency(data.totalRedemption || 0),
       subValue: `Pending: ${formatCurrency(data.totalRedemptionPending || 0)}`,
       icon: Gift,
-      color: "text-violet-600",
-      bg: "bg-violet-50",
+      color: 'text-violet-600',
+      bg: 'bg-violet-50',
     },
     {
-      label: "Current Received",
+      label: 'Current Received',
       value: formatCurrency(data.currentReceivedAmount || 0),
-      subValue: "Current Received Count",
+      subValue: 'Current Received Count',
       icon: IndianRupee,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
     },
     {
-      label: "Pymt vs OD",
+      label: 'Pymt vs OD',
       value: formatCurrency(data.paymentAgainstOverdueValue || 0),
-      subValue: "Against Overdue",
+      subValue: 'Against Overdue',
       icon: TrendingUp,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
     },
     {
-      label: "CD Collection",
+      label: 'CD Collection',
       value: formatCurrency(data.currentDueCollectionValue || 0),
-      subValue: "Current Due Collection",
+      subValue: 'Current Due Collection',
       icon: Check,
-      color: "text-indigo-600",
-      bg: "bg-indigo-50",
+      color: 'text-indigo-600',
+      bg: 'bg-indigo-50',
     },
   ];
 
   const downloadCSV = (exportData: any[], filename: string) => {
     if (!exportData.length) return;
-    const headers = Array.from(new Set(exportData.reduce((acc, row) => acc.concat(Object.keys(row || {})), [] as string[])));
-    const csvRows = [headers.join(",")];
+    const headers = Array.from(
+      new Set(exportData.reduce((acc, row) => acc.concat(Object.keys(row || {})), [] as string[])),
+    );
+    const csvRows = [headers.join(',')];
     for (const row of exportData) {
       const values = headers.map((header: string) => {
         const val = (row as any)[header];
-        return `"${String(val ?? "").replace(/"/g, '""')}"`;
+        return `"${String(val ?? '').replace(/"/g, '""')}"`;
       });
-      csvRows.push(values.join(","));
+      csvRows.push(values.join(','));
     }
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
   };
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortKey(key); setSortDir("asc"); }
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
   };
 
   const sortCustomers = (list: ProcessedData[]) => {
     return [...list].sort((a, b) => {
-      let av: any = a[sortKey as keyof ProcessedData] ?? "";
-      let bv: any = b[sortKey as keyof ProcessedData] ?? "";
-      if (typeof av === "string") av = av.toLowerCase();
-      if (typeof bv === "string") bv = bv.toLowerCase();
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1 : -1;
+      let av: any = a[sortKey as keyof ProcessedData] ?? '';
+      let bv: any = b[sortKey as keyof ProcessedData] ?? '';
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
   };
 
   const filterCustomers = (list: ProcessedData[]) =>
-    list.filter(c => {
+    list.filter((c) => {
       const q = search.toLowerCase();
-      return !q ||
-        (c.customerName || "").toLowerCase().includes(q) ||
-        (c.profileNo || "").toLowerCase().includes(q) ||
-        (c.orderNo || "").toLowerCase().includes(q) ||
-        (c.schemeType || "").toLowerCase().includes(q);
+      return (
+        !q ||
+        (c.customerName || '').toLowerCase().includes(q) ||
+        (c.profileNo || '').toLowerCase().includes(q) ||
+        (c.orderNo || '').toLowerCase().includes(q) ||
+        (c.schemeType || '').toLowerCase().includes(q)
+      );
     });
 
   const SortIcon = ({ k }: { k: SortKey }) =>
-    sortKey === k
-      ? (sortDir === "asc" ? <ChevronUp className="w-3 h-3 inline ml-0.5" /> : <ChevronDown className="w-3 h-3 inline ml-0.5" />)
-      : null;
+    sortKey === k ? (
+      sortDir === 'asc' ? (
+        <ChevronUp className="w-3 h-3 inline ml-0.5" />
+      ) : (
+        <ChevronDown className="w-3 h-3 inline ml-0.5" />
+      )
+    ) : null;
 
   const tabs: { id: Tab; label: string; count: number; icon: any; color: string }[] = [
-    { id: "overview", label: "Overview", count: 0, icon: BarChart3, color: "blue" },
-    { id: "enrollment", label: "Enrollment", count: enrolmentCustomers.length, icon: BookOpen, color: "emerald" },
-    { id: "collection", label: "Collection / Due", count: collectionCustomers.length, icon: Wallet, color: "amber" },
-    { id: "re-enrollment", label: "Re-Enrollment", count: reEnrolmentCustomers.length, icon: RefreshCw, color: "cyan" },
-    { id: "master", label: "Master analytical Sheet", count: customers.length, icon: FileText, color: "slate" },
+    { id: 'overview', label: 'Overview', count: 0, icon: BarChart3, color: 'blue' },
+    {
+      id: 'enrollment',
+      label: 'Enrollment',
+      count: enrolmentCustomers.length,
+      icon: BookOpen,
+      color: 'emerald',
+    },
+    {
+      id: 'collection',
+      label: 'Collection / Due',
+      count: collectionCustomers.length,
+      icon: Wallet,
+      color: 'amber',
+    },
+    {
+      id: 're-enrollment',
+      label: 'Re-Enrollment',
+      count: reEnrolmentCustomers.length,
+      icon: RefreshCw,
+      color: 'cyan',
+    },
+    {
+      id: 'master',
+      label: 'Master analytical Sheet',
+      count: customers.length,
+      icon: FileText,
+      color: 'slate',
+    },
   ];
 
   return (
@@ -293,7 +359,6 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
           <div className="bg-white border-b border-slate-200 flex-shrink-0 z-20">
             <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16 gap-4">
-
                 {/* Back button + identity */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <button
@@ -306,25 +371,52 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
 
                   <div className="h-6 w-px bg-slate-200 flex-shrink-0" />
 
-                  <div className={cn(
-                    "w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-lg flex-shrink-0",
-                    data.type === "employee" ? "bg-blue-600 shadow-blue-200" : "bg-emerald-600 shadow-emerald-200"
-                  )}>
-                    {data.type === "employee" ? <User className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                  <div
+                    className={cn(
+                      'w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-lg flex-shrink-0',
+                      data.type === 'employee'
+                        ? 'bg-blue-600 shadow-blue-200'
+                        : 'bg-emerald-600 shadow-emerald-200',
+                    )}
+                  >
+                    {data.type === 'employee' ? (
+                      <User className="w-4 h-4" />
+                    ) : (
+                      <MapPin className="w-4 h-4" />
+                    )}
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h1 className="text-base sm:text-lg font-black text-slate-900 truncate">{data.name}</h1>
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest flex-shrink-0",
-                        data.type === "employee" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
-                      )}>{data.type}</span>
+                      <h1 className="text-base sm:text-lg font-black text-slate-900 truncate">
+                        {data.name}
+                      </h1>
+                      <span
+                        className={cn(
+                          'px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest flex-shrink-0',
+                          data.type === 'employee'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-emerald-100 text-emerald-700',
+                        )}
+                      >
+                        {data.type}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-400 font-bold text-[10px]">
-                      {data.location && <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{data.location}</span>}
-                      <span className="flex items-center gap-1"><Trophy className="w-2.5 h-2.5 text-amber-500" />ID: {data.id}</span>
-                      <span className="flex items-center gap-1 text-violet-600 font-black"><Users className="w-2.5 h-2.5" />{totalUniqueCustomers} Customers</span>
+                      {data.location && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-2.5 h-2.5" />
+                          {data.location}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Trophy className="w-2.5 h-2.5 text-amber-500" />
+                        ID: {data.id}
+                      </span>
+                      <span className="flex items-center gap-1 text-violet-600 font-black">
+                        <Users className="w-2.5 h-2.5" />
+                        {totalUniqueCustomers} Customers
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -335,48 +427,65 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                     onClick={() => downloadCSV(enrolmentCustomers, `${data.name}-enrolments.csv`)}
                     className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl hover:bg-blue-100 transition-colors"
                   >
-                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Enrols</span>
+                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{' '}
+                    <span className="hidden xs:inline">Enrols</span>
                   </button>
                   <button
                     onClick={() => downloadCSV(collectionCustomers, `${data.name}-collections.csv`)}
                     className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl hover:bg-emerald-100 transition-colors"
                   >
-                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Colls</span>
+                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{' '}
+                    <span className="hidden xs:inline">Colls</span>
                   </button>
                   <button
-                    onClick={() => downloadCSV(reEnrolmentCustomers, `${data.name}-re-enrolments.csv`)}
+                    onClick={() =>
+                      downloadCSV(reEnrolmentCustomers, `${data.name}-re-enrolments.csv`)
+                    }
                     className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold bg-cyan-50 text-cyan-600 rounded-lg sm:rounded-xl hover:bg-cyan-100 transition-colors"
                   >
-                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden xs:inline">Re-Enrols</span>
+                    <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" />{' '}
+                    <span className="hidden xs:inline">Re-Enrols</span>
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-
           {/* Tabs */}
           <div className="bg-white border-b border-slate-200 flex-shrink-0 z-10">
             <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex gap-1 overflow-x-auto scrollbar-hide no-scrollbar">
-                {tabs.map(tab => (
+                {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); setSearch(""); }}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setSearch('');
+                    }}
                     className={cn(
-                      "flex items-center gap-2 px-5 py-4 text-xs font-black uppercase tracking-wide border-b-2 transition-all whitespace-nowrap",
+                      'flex items-center gap-2 px-5 py-4 text-xs font-black uppercase tracking-wide border-b-2 transition-all whitespace-nowrap',
                       activeTab === tab.id
-                        ? tab.color === "blue" ? "border-blue-500 text-blue-600" : tab.color === "emerald" ? "border-emerald-500 text-emerald-600" : "border-amber-500 text-amber-600"
-                        : "border-transparent text-slate-400 hover:text-slate-700"
+                        ? tab.color === 'blue'
+                          ? 'border-blue-500 text-blue-600'
+                          : tab.color === 'emerald'
+                            ? 'border-emerald-500 text-emerald-600'
+                            : 'border-amber-500 text-amber-600'
+                        : 'border-transparent text-slate-400 hover:text-slate-700',
                     )}
                   >
                     <tab.icon className="w-3.5 h-3.5" />
                     {tab.label}
                     {tab.count > 0 && (
-                      <span className={cn(
-                        "px-1.5 py-0.5 rounded-full text-[9px] font-black",
-                        tab.color === "emerald" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                      )}>{tab.count}</span>
+                      <span
+                        className={cn(
+                          'px-1.5 py-0.5 rounded-full text-[9px] font-black',
+                          tab.color === 'emerald'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-amber-100 text-amber-700',
+                        )}
+                      >
+                        {tab.count}
+                      </span>
                     )}
                   </button>
                 ))}
@@ -388,7 +497,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
               <AnimatePresence mode="wait">
-                {activeTab === "overview" && (
+                {activeTab === 'overview' && (
                   <motion.div
                     key="overview"
                     initial={{ opacity: 0, y: 10 }}
@@ -407,15 +516,26 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                           className="bg-white p-4 rounded-xl border border-slate-100 shadow-md shadow-slate-200/20 group hover:scale-[1.02] transition-transform duration-300"
                         >
                           <div className="flex items-center justify-between mb-2.5">
-                            <div className={cn("p-2 rounded-lg", stat.bg)}>
-                              <stat.icon className={cn("w-3.5 h-3.5", stat.color)} />
+                            <div className={cn('p-2 rounded-lg', stat.bg)}>
+                              <stat.icon className={cn('w-3.5 h-3.5', stat.color)} />
                             </div>
                             <ArrowUpRight className="w-3 h-3 text-slate-200 group-hover:text-slate-400 transition-colors" />
                           </div>
-                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</div>
-                          <div className={cn("text-base sm:text-xl font-black tracking-tighter", stat.color)}>{stat.value}</div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+                            {stat.label}
+                          </div>
+                          <div
+                            className={cn(
+                              'text-base sm:text-xl font-black tracking-tighter',
+                              stat.color,
+                            )}
+                          >
+                            {stat.value}
+                          </div>
                           {stat.subValue && (
-                            <div className="text-[9px] font-bold text-slate-500 mt-1 leading-relaxed">{stat.subValue}</div>
+                            <div className="text-[9px] font-bold text-slate-500 mt-1 leading-relaxed">
+                              {stat.subValue}
+                            </div>
                           )}
                         </motion.div>
                       ))}
@@ -426,18 +546,38 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/20">
                         <div className="flex items-center justify-between mb-5">
                           <div>
-                            <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">Scheme Breakdown</h3>
-                            <p className="text-[10px] font-medium text-slate-500 mt-0.5">Contribution by scheme type</p>
+                            <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                              Scheme Breakdown
+                            </h3>
+                            <p className="text-[10px] font-medium text-slate-500 mt-0.5">
+                              Contribution by scheme type
+                            </p>
                           </div>
                           <BarChart3 className="w-4 h-4 text-slate-300" />
                         </div>
                         <div className="h-[240px] w-full min-h-[240px]">
                           <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <BarChart data={schemeChartData}>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 9, fontWeight: 700 }} />
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                vertical={false}
+                                stroke="#f1f5f9"
+                              />
+                              <XAxis
+                                dataKey="name"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 700 }}
+                              />
                               <YAxis hide />
-                              <Tooltip cursor={{ fill: "#f8fafc" }} contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
+                              <Tooltip
+                                cursor={{ fill: '#f8fafc' }}
+                                contentStyle={{
+                                  borderRadius: '12px',
+                                  border: 'none',
+                                  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                }}
+                              />
                               <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={24}>
                                 {schemeChartData.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -451,25 +591,48 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/20">
                         <div className="flex items-center justify-between mb-5">
                           <div>
-                            <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">Portfolio Mix</h3>
-                            <p className="text-[10px] font-medium text-slate-500 mt-0.5">Percentage distribution</p>
+                            <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                              Portfolio Mix
+                            </h3>
+                            <p className="text-[10px] font-medium text-slate-500 mt-0.5">
+                              Percentage distribution
+                            </p>
                           </div>
                           <PieChart className="w-4 h-4 text-slate-300" />
                         </div>
                         <div className="h-[240px] w-full relative min-h-[240px]">
                           <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <RePieChart>
-                              <Pie data={schemeChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={6} dataKey="value" stroke="none">
+                              <Pie
+                                data={schemeChartData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={85}
+                                paddingAngle={6}
+                                dataKey="value"
+                                stroke="none"
+                              >
                                 {schemeChartData.map((entry, index) => (
                                   <ReCell key={`cell-${index}`} fill={entry.color} />
                                 ))}
                               </Pie>
-                              <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
+                              <Tooltip
+                                contentStyle={{
+                                  borderRadius: '12px',
+                                  border: 'none',
+                                  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                }}
+                              />
                             </RePieChart>
                           </ResponsiveContainer>
                           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total</span>
-                            <span className="text-lg font-black text-slate-900 tracking-tighter">{data.totalCount}</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                              Total
+                            </span>
+                            <span className="text-lg font-black text-slate-900 tracking-tighter">
+                              {data.totalCount}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -477,20 +640,45 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
 
                     {/* Scheme performance metrics */}
                     <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/20">
-                      <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight mb-4">Scheme Metrics</h3>
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight mb-4">
+                        Scheme Metrics
+                      </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {[
-                          { label: "11+1 Scheme", value: data.schemes.count11Plus1, color: "bg-blue-500" },
-                          { label: "One Pay", value: data.schemes.countOnePay, color: "bg-emerald-500" },
-                          { label: "11+2 Scheme", value: data.schemes.count11Plus2, color: "bg-amber-500" },
-                          { label: "GP Rate Shield", value: data.schemes.countGpRateShield, color: "bg-rose-500" },
-                        ].map(item => (
-                          <div key={item.label} className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                          {
+                            label: '11+1 Scheme',
+                            value: data.schemes.count11Plus1,
+                            color: 'bg-blue-500',
+                          },
+                          {
+                            label: 'One Pay',
+                            value: data.schemes.countOnePay,
+                            color: 'bg-emerald-500',
+                          },
+                          {
+                            label: '11+2 Scheme',
+                            value: data.schemes.count11Plus2,
+                            color: 'bg-amber-500',
+                          },
+                          {
+                            label: 'GP Rate Shield',
+                            value: data.schemes.countGpRateShield,
+                            color: 'bg-rose-500',
+                          },
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            className="p-4 rounded-xl bg-slate-50 border border-slate-100"
+                          >
                             <div className="flex items-center gap-2 mb-2">
-                              <div className={cn("w-2.5 h-2.5 rounded-full", item.color)} />
-                              <span className="text-[10px] font-bold text-slate-500">{item.label}</span>
+                              <div className={cn('w-2.5 h-2.5 rounded-full', item.color)} />
+                              <span className="text-[10px] font-bold text-slate-500">
+                                {item.label}
+                              </span>
                             </div>
-                            <div className="text-xl sm:text-2xl font-black text-slate-900">{formatNumber(item.value)}</div>
+                            <div className="text-xl sm:text-2xl font-black text-slate-900">
+                              {formatNumber(item.value)}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -498,7 +686,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                   </motion.div>
                 )}
 
-                {activeTab === "enrollment" && (
+                {activeTab === 'enrollment' && (
                   <motion.div
                     key="enrollment"
                     initial={{ opacity: 0, y: 10 }}
@@ -509,20 +697,46 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                     {/* Summary banner */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
-                        <div className="text-xl font-black text-blue-700">{enrolmentCustomers.length}</div>
-                        <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Total Records</div>
+                        <div className="text-xl font-black text-blue-700">
+                          {enrolmentCustomers.length}
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">
+                          Total Records
+                        </div>
                       </div>
                       <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
-                        <div className="text-xl font-black text-emerald-700">{formatCurrency(enrolmentCustomers.reduce((s, c) => s + (c.installmentAmount || 0), 0))}</div>
-                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Total Installment</div>
+                        <div className="text-xl font-black text-emerald-700">
+                          {formatCurrency(
+                            enrolmentCustomers.reduce((s, c) => s + (c.installmentAmount || 0), 0),
+                          )}
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
+                          Total Installment
+                        </div>
                       </div>
                       <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-100">
-                        <div className="text-xl font-black text-amber-700">{formatCurrency(enrolmentCustomers.reduce((s, c) => s + (c.expectedInstAmount || 0), 0))}</div>
-                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Expected Inst.</div>
+                        <div className="text-xl font-black text-amber-700">
+                          {formatCurrency(
+                            enrolmentCustomers.reduce((s, c) => s + (c.expectedInstAmount || 0), 0),
+                          )}
+                        </div>
+                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
+                          Expected Inst.
+                        </div>
                       </div>
                       <div className="bg-violet-50 rounded-xl p-3 text-center border border-violet-100">
-                        <div className="text-xl font-black text-violet-700">{new Set(enrolmentCustomers.map(c => c.profileNo || c.customerName).filter(Boolean)).size}</div>
-                        <div className="text-[10px] font-bold text-violet-500 uppercase tracking-wider">Unique Customers</div>
+                        <div className="text-xl font-black text-violet-700">
+                          {
+                            new Set(
+                              enrolmentCustomers
+                                .map((c) => c.profileNo || c.customerName)
+                                .filter(Boolean),
+                            ).size
+                          }
+                        </div>
+                        <div className="text-[10px] font-bold text-violet-500 uppercase tracking-wider">
+                          Unique Customers
+                        </div>
                       </div>
                     </div>
 
@@ -534,7 +748,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         placeholder="Search by customer name, profile, order no, scheme..."
                         className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={(e) => setSearch(e.target.value)}
                       />
                     </div>
 
@@ -544,57 +758,125 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         <table className="w-full" style={{ minWidth: '1400px' }}>
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-100">
-                              <th className="sticky left-0 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10">#</th>
-                              <th className="sticky left-8 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10 min-w-[160px]">Customer Name</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Profile No</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Order No</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Joining Date</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Type</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Status</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Inst. Amount</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Expected Inst.</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Curr. Received</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Discount</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Location</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Loc. Code</th>
+                              <th className="sticky left-0 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10">
+                                #
+                              </th>
+                              <th className="sticky left-8 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10 min-w-[160px]">
+                                Customer Name
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Profile No
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Order No
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Joining Date
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Scheme Type
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Scheme Status
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Inst. Amount
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Expected Inst.
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Curr. Received
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Scheme Discount
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Location
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Loc. Code
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {(() => {
                               const rows = sortCustomers(filterCustomers(enrolmentCustomers));
-                              if (!rows.length) return (
-                                <tr><td colSpan={13} className="px-6 py-10 text-center text-sm text-slate-400 font-medium">
-                                  {search ? `No enrollment records matching "${search}"` : "No enrollment data available"}
-                                </td></tr>
-                              );
+                              if (!rows.length)
+                                return (
+                                  <tr>
+                                    <td
+                                      colSpan={13}
+                                      className="px-6 py-10 text-center text-sm text-slate-400 font-medium"
+                                    >
+                                      {search
+                                        ? `No enrollment records matching "${search}"`
+                                        : 'No enrollment data available'}
+                                    </td>
+                                  </tr>
+                                );
                               return rows.map((c, i) => (
-                                <tr key={c.id || i} className="hover:bg-blue-50/20 transition-colors group">
-                                  <td className="sticky left-0 bg-white group-hover:bg-blue-50/20 px-3 py-2.5 text-[10px] font-bold text-slate-400 z-10">{i + 1}</td>
+                                <tr
+                                  key={c.id || i}
+                                  className="hover:bg-blue-50/20 transition-colors group"
+                                >
+                                  <td className="sticky left-0 bg-white group-hover:bg-blue-50/20 px-3 py-2.5 text-[10px] font-bold text-slate-400 z-10">
+                                    {i + 1}
+                                  </td>
                                   <td className="sticky left-8 bg-white group-hover:bg-blue-50/20 px-3 py-2.5 z-10 min-w-[160px]">
                                     <div className="flex items-center gap-2">
                                       <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center text-[9px] font-black flex-shrink-0">
-                                        {(c.customerName || "?").charAt(0).toUpperCase()}
+                                        {(c.customerName || '?').charAt(0).toUpperCase()}
                                       </div>
-                                      <span className="text-[11px] font-black text-slate-800 group-hover:text-blue-700">{c.customerName || "—"}</span>
+                                      <span className="text-[11px] font-black text-slate-800 group-hover:text-blue-700">
+                                        {c.customerName || '—'}
+                                      </span>
                                     </div>
                                   </td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">{c.profileNo || "—"}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-500 whitespace-nowrap">{c.orderNo || "—"}</td>
-                                  <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">{c.joiningDate || "—"}</td>
-                                  <td className="px-3 py-2.5">
-                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wide whitespace-nowrap">{c.schemeType || "—"}</span>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">
+                                    {c.profileNo || '—'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                                    {c.orderNo || '—'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">
+                                    {c.joiningDate || '—'}
                                   </td>
                                   <td className="px-3 py-2.5">
-                                    <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide whitespace-nowrap",
-                                      c.schemeStatus?.toLowerCase().includes("active") ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-                                    )}>{c.schemeStatus || "—"}</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wide whitespace-nowrap">
+                                      {c.schemeType || '—'}
+                                    </span>
                                   </td>
-                                  <td className="px-3 py-2.5 text-[11px] font-black text-slate-800 text-right whitespace-nowrap">{formatCurrency(c.installmentAmount || 0)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">{formatCurrency(c.expectedInstAmount || 0)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-700 text-right whitespace-nowrap">{formatCurrency(c.currentReceivedAmount || 0)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-amber-700 text-right whitespace-nowrap">{formatCurrency(c.schemeDiscount || 0)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">{c.location || "—"}</td>
-                                  <td className="px-3 py-2.5 text-[11px] text-slate-400 whitespace-nowrap">{c.locationCode || "—"}</td>
+                                  <td className="px-3 py-2.5">
+                                    <span
+                                      className={cn(
+                                        'px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide whitespace-nowrap',
+                                        c.schemeStatus?.toLowerCase().includes('active')
+                                          ? 'bg-emerald-50 text-emerald-700'
+                                          : 'bg-slate-100 text-slate-500',
+                                      )}
+                                    >
+                                      {c.schemeStatus || '—'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-black text-slate-800 text-right whitespace-nowrap">
+                                    {formatCurrency(c.installmentAmount || 0)}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">
+                                    {formatCurrency(c.expectedInstAmount || 0)}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-700 text-right whitespace-nowrap">
+                                    {formatCurrency(c.currentReceivedAmount || 0)}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-amber-700 text-right whitespace-nowrap">
+                                    {formatCurrency(c.schemeDiscount || 0)}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">
+                                    {c.location || '—'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] text-slate-400 whitespace-nowrap">
+                                    {c.locationCode || '—'}
+                                  </td>
                                 </tr>
                               ));
                             })()}
@@ -602,13 +884,15 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         </table>
                       </div>
                       <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        Showing {filterCustomers(enrolmentCustomers).length} of {enrolmentCustomers.length} enrollment records • Scroll right to see all columns
+                        Showing {filterCustomers(enrolmentCustomers).length} of{' '}
+                        {enrolmentCustomers.length} enrollment records • Scroll right to see all
+                        columns
                       </div>
                     </div>
                   </motion.div>
                 )}
 
-                {activeTab === "collection" && (
+                {activeTab === 'collection' && (
                   <motion.div
                     key="collection"
                     initial={{ opacity: 0, y: 10 }}
@@ -619,20 +903,49 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                     {/* Summary banner */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-100">
-                        <div className="text-xl font-black text-amber-700">{collectionCustomers.length}</div>
-                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Total Records</div>
+                        <div className="text-xl font-black text-amber-700">
+                          {collectionCustomers.length}
+                        </div>
+                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
+                          Total Records
+                        </div>
                       </div>
                       <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
-                        <div className="text-xl font-black text-emerald-700">{formatCurrency(collectionCustomers.reduce((s, c) => s + (c.collectionReceivedValue || 0), 0))}</div>
-                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Total Collected</div>
+                        <div className="text-xl font-black text-emerald-700">
+                          {formatCurrency(
+                            collectionCustomers.reduce(
+                              (s, c) => s + (c.collectionReceivedValue || 0),
+                              0,
+                            ),
+                          )}
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
+                          Total Collected
+                        </div>
                       </div>
                       <div className="bg-rose-50 rounded-xl p-3 text-center border border-rose-100">
-                        <div className="text-xl font-black text-rose-700">{formatCurrency(collectionCustomers.reduce((s, c) => s + (c.totalDue || 0), 0))}</div>
-                        <div className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Total Due</div>
+                        <div className="text-xl font-black text-rose-700">
+                          {formatCurrency(
+                            collectionCustomers.reduce((s, c) => s + (c.totalDue || 0), 0),
+                          )}
+                        </div>
+                        <div className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">
+                          Total Due
+                        </div>
                       </div>
                       <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
-                        <div className="text-xl font-black text-blue-700">{new Set(collectionCustomers.map(c => c.profileNo || c.customerName).filter(Boolean)).size}</div>
-                        <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Unique Customers</div>
+                        <div className="text-xl font-black text-blue-700">
+                          {
+                            new Set(
+                              collectionCustomers
+                                .map((c) => c.profileNo || c.customerName)
+                                .filter(Boolean),
+                            ).size
+                          }
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">
+                          Unique Customers
+                        </div>
                       </div>
                     </div>
 
@@ -644,7 +957,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         placeholder="Search by customer name, profile, order no, scheme..."
                         className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={(e) => setSearch(e.target.value)}
                       />
                     </div>
 
@@ -654,78 +967,194 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         <table className="w-full" style={{ minWidth: '1900px' }}>
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-100">
-                              <th className="sticky left-0 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10">#</th>
-                              <th className="sticky left-8 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10 min-w-[160px]">Customer Name</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Profile No</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Order No</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Type</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Status</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Inst. Amount</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Expected Inst.</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Curr. Received</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Total Due</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">OD Pending Cnt</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">OD Pending Amt</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Curr Due Cnt</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Curr Due Amt</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Paid Cust Cnt</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Collection Rcvd</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Collect %</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Pymt vs OD</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Curr Due Coll.</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Location</th>
+                              <th className="sticky left-0 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10">
+                                #
+                              </th>
+                              <th className="sticky left-8 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10 min-w-[160px]">
+                                Customer Name
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Profile No
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Order No
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Scheme Type
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Scheme Status
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Inst. Amount
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Expected Inst.
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Curr. Received
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Total Due
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                OD Pending Cnt
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                OD Pending Amt
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Curr Due Cnt
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Curr Due Amt
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Paid Cust Cnt
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Collection Rcvd
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Collect %
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Pymt vs OD
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Curr Due Coll.
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Location
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {(() => {
                               const rows = sortCustomers(filterCustomers(collectionCustomers));
-                              if (!rows.length) return (
-                                <tr><td colSpan={20} className="px-6 py-10 text-center text-sm text-slate-400 font-medium">
-                                  {search ? `No collection records matching "${search}"` : "No collection data available"}
-                                </td></tr>
-                              );
+                              if (!rows.length)
+                                return (
+                                  <tr>
+                                    <td
+                                      colSpan={20}
+                                      className="px-6 py-10 text-center text-sm text-slate-400 font-medium"
+                                    >
+                                      {search
+                                        ? `No collection records matching "${search}"`
+                                        : 'No collection data available'}
+                                    </td>
+                                  </tr>
+                                );
                               return rows.map((c, i) => {
                                 const hasDue = (c.totalDue || 0) > 0;
                                 const hasCollection = (c.collectionReceivedValue || 0) > 0;
                                 return (
-                                  <tr key={c.id || i} className={cn("transition-colors group", hasDue ? "hover:bg-rose-50/20" : "hover:bg-emerald-50/20")}>
-                                    <td className="sticky left-0 bg-white group-hover:bg-rose-50/10 px-3 py-2.5 text-[10px] font-bold text-slate-400 z-10">{i + 1}</td>
+                                  <tr
+                                    key={c.id || i}
+                                    className={cn(
+                                      'transition-colors group',
+                                      hasDue ? 'hover:bg-rose-50/20' : 'hover:bg-emerald-50/20',
+                                    )}
+                                  >
+                                    <td className="sticky left-0 bg-white group-hover:bg-rose-50/10 px-3 py-2.5 text-[10px] font-bold text-slate-400 z-10">
+                                      {i + 1}
+                                    </td>
                                     <td className="sticky left-8 bg-white group-hover:bg-rose-50/10 px-3 py-2.5 z-10 min-w-[160px]">
                                       <div className="flex items-center gap-2">
-                                        <div className={cn("w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-black flex-shrink-0", hasDue ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600")}>
-                                          {(c.customerName || "?").charAt(0).toUpperCase()}
+                                        <div
+                                          className={cn(
+                                            'w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-black flex-shrink-0',
+                                            hasDue
+                                              ? 'bg-rose-100 text-rose-600'
+                                              : 'bg-emerald-100 text-emerald-600',
+                                          )}
+                                        >
+                                          {(c.customerName || '?').charAt(0).toUpperCase()}
                                         </div>
-                                        <span className="text-[11px] font-black text-slate-800">{c.customerName || "—"}</span>
+                                        <span className="text-[11px] font-black text-slate-800">
+                                          {c.customerName || '—'}
+                                        </span>
                                       </div>
                                     </td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">{c.profileNo || "—"}</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-500 whitespace-nowrap">{c.orderNo || "—"}</td>
-                                    <td className="px-3 py-2.5">
-                                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wide whitespace-nowrap">{c.schemeType || "—"}</span>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">
+                                      {c.profileNo || '—'}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                                      {c.orderNo || '—'}
                                     </td>
                                     <td className="px-3 py-2.5">
-                                      <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide whitespace-nowrap",
-                                        c.schemeStatus?.toLowerCase().includes("active") ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-                                      )}>{c.schemeStatus || "—"}</span>
+                                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wide whitespace-nowrap">
+                                        {c.schemeType || '—'}
+                                      </span>
                                     </td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-700 text-right whitespace-nowrap">{formatCurrency(c.installmentAmount || 0)}</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">{formatCurrency(c.expectedInstAmount || 0)}</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-700 text-right whitespace-nowrap">{formatCurrency(c.currentReceivedAmount || 0)}</td>
+                                    <td className="px-3 py-2.5">
+                                      <span
+                                        className={cn(
+                                          'px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide whitespace-nowrap',
+                                          c.schemeStatus?.toLowerCase().includes('active')
+                                            ? 'bg-emerald-50 text-emerald-700'
+                                            : 'bg-slate-100 text-slate-500',
+                                        )}
+                                      >
+                                        {c.schemeStatus || '—'}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-700 text-right whitespace-nowrap">
+                                      {formatCurrency(c.installmentAmount || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">
+                                      {formatCurrency(c.expectedInstAmount || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-emerald-700 text-right whitespace-nowrap">
+                                      {formatCurrency(c.currentReceivedAmount || 0)}
+                                    </td>
                                     <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                                      <span className={cn("text-[11px] font-black", hasDue ? "text-rose-600" : "text-slate-400")}>{formatCurrency(c.totalDue || 0)}</span>
+                                      <span
+                                        className={cn(
+                                          'text-[11px] font-black',
+                                          hasDue ? 'text-rose-600' : 'text-slate-400',
+                                        )}
+                                      >
+                                        {formatCurrency(c.totalDue || 0)}
+                                      </span>
                                     </td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">{formatNumber(c.overdueCount || 0)}</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-rose-600 text-right whitespace-nowrap">{formatCurrency(c.overdueValue || 0)}</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">{formatNumber(c.currentDueCount || 0)}</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-amber-700 text-right whitespace-nowrap">{formatCurrency(c.currentDueValue || 0)}</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">{formatNumber(c.paidCustomerCount || 0)}</td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">
+                                      {formatNumber(c.overdueCount || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-rose-600 text-right whitespace-nowrap">
+                                      {formatCurrency(c.overdueValue || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">
+                                      {formatNumber(c.currentDueCount || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-amber-700 text-right whitespace-nowrap">
+                                      {formatCurrency(c.currentDueValue || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">
+                                      {formatNumber(c.paidCustomerCount || 0)}
+                                    </td>
                                     <td className="px-3 py-2.5 text-right whitespace-nowrap">
-                                      <span className={cn("text-[11px] font-black", hasCollection ? "text-emerald-600" : "text-slate-400")}>{formatCurrency(c.collectionReceivedValue || 0)}</span>
+                                      <span
+                                        className={cn(
+                                          'text-[11px] font-black',
+                                          hasCollection ? 'text-emerald-600' : 'text-slate-400',
+                                        )}
+                                      >
+                                        {formatCurrency(c.collectionReceivedValue || 0)}
+                                      </span>
                                     </td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">{(c.collectionPercent || 0).toFixed(1)}%</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-blue-700 text-right whitespace-nowrap">{formatCurrency(c.paymentAgainstOverdueValue || 0)}</td>
-                                    <td className="px-3 py-2.5 text-[11px] font-bold text-indigo-700 text-right whitespace-nowrap">{formatCurrency(c.currentDueCollectionValue || 0)}</td>
-                                    <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">{c.location || "—"}</td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">
+                                      {(c.collectionPercent || 0).toFixed(1)}%
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-blue-700 text-right whitespace-nowrap">
+                                      {formatCurrency(c.paymentAgainstOverdueValue || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] font-bold text-indigo-700 text-right whitespace-nowrap">
+                                      {formatCurrency(c.currentDueCollectionValue || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">
+                                      {c.location || '—'}
+                                    </td>
                                   </tr>
                                 );
                               });
@@ -734,13 +1163,15 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         </table>
                       </div>
                       <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        Showing {filterCustomers(collectionCustomers).length} of {collectionCustomers.length} collection records • Scroll right to see all columns
+                        Showing {filterCustomers(collectionCustomers).length} of{' '}
+                        {collectionCustomers.length} collection records • Scroll right to see all
+                        columns
                       </div>
                     </div>
                   </motion.div>
                 )}
 
-                {activeTab === "re-enrollment" && (
+                {activeTab === 're-enrollment' && (
                   <motion.div
                     key="re-enrollment"
                     initial={{ opacity: 0, y: 10 }}
@@ -751,20 +1182,49 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                     {/* Summary banner */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="bg-cyan-50 rounded-xl p-3 text-center border border-cyan-100">
-                        <div className="text-xl font-black text-cyan-700">{reEnrolmentCustomers.length}</div>
-                        <div className="text-[10px] font-bold text-cyan-500 uppercase tracking-wider">Re-Enrollment Count</div>
+                        <div className="text-xl font-black text-cyan-700">
+                          {reEnrolmentCustomers.length}
+                        </div>
+                        <div className="text-[10px] font-bold text-cyan-500 uppercase tracking-wider">
+                          Re-Enrollment Count
+                        </div>
                       </div>
                       <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
-                        <div className="text-xl font-black text-emerald-700">{formatCurrency(reEnrolmentCustomers.reduce((s, c) => s + (c.reEnrolmentValue || 0), 0))}</div>
-                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Re-Enrollment Value</div>
+                        <div className="text-xl font-black text-emerald-700">
+                          {formatCurrency(
+                            reEnrolmentCustomers.reduce((s, c) => s + (c.reEnrolmentValue || 0), 0),
+                          )}
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
+                          Re-Enrollment Value
+                        </div>
                       </div>
                       <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
-                        <div className="text-xl font-black text-blue-700">{formatCurrency(reEnrolmentCustomers.reduce((s, c) => s + (c.installmentAmount || 0), 0))}</div>
-                        <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Inst. Amount</div>
+                        <div className="text-xl font-black text-blue-700">
+                          {formatCurrency(
+                            reEnrolmentCustomers.reduce(
+                              (s, c) => s + (c.installmentAmount || 0),
+                              0,
+                            ),
+                          )}
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">
+                          Inst. Amount
+                        </div>
                       </div>
                       <div className="bg-violet-50 rounded-xl p-3 text-center border border-violet-100">
-                        <div className="text-xl font-black text-violet-700">{new Set(reEnrolmentCustomers.map(c => c.profileNo || c.customerName).filter(Boolean)).size}</div>
-                        <div className="text-[10px] font-bold text-violet-500 uppercase tracking-wider">Unique Customers</div>
+                        <div className="text-xl font-black text-violet-700">
+                          {
+                            new Set(
+                              reEnrolmentCustomers
+                                .map((c) => c.profileNo || c.customerName)
+                                .filter(Boolean),
+                            ).size
+                          }
+                        </div>
+                        <div className="text-[10px] font-bold text-violet-500 uppercase tracking-wider">
+                          Unique Customers
+                        </div>
                       </div>
                     </div>
 
@@ -776,7 +1236,7 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         placeholder="Search by customer name, profile, scheme..."
                         className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={(e) => setSearch(e.target.value)}
                       />
                     </div>
 
@@ -786,51 +1246,107 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         <table className="w-full" style={{ minWidth: '1300px' }}>
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-100">
-                              <th className="sticky left-0 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10">#</th>
-                              <th className="sticky left-8 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10 min-w-[160px]">Customer Name</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Profile No</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Order No</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Type</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Scheme Status</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Re-Enrol Count</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Re-Enrol Value</th>
-                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Inst. Amount</th>
-                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Location</th>
+                              <th className="sticky left-0 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10">
+                                #
+                              </th>
+                              <th className="sticky left-8 bg-slate-50 text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest z-10 min-w-[160px]">
+                                Customer Name
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Profile No
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Order No
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Scheme Type
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Scheme Status
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Re-Enrol Count
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Re-Enrol Value
+                              </th>
+                              <th className="text-right px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Inst. Amount
+                              </th>
+                              <th className="text-left px-3 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                Location
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {(() => {
                               const rows = sortCustomers(filterCustomers(reEnrolmentCustomers));
-                              if (!rows.length) return (
-                                <tr><td colSpan={10} className="px-6 py-10 text-center text-sm text-slate-400 font-medium">
-                                  {search ? `No re-enrollment records matching "${search}"` : "No re-enrollment data available"}
-                                </td></tr>
-                              );
+                              if (!rows.length)
+                                return (
+                                  <tr>
+                                    <td
+                                      colSpan={10}
+                                      className="px-6 py-10 text-center text-sm text-slate-400 font-medium"
+                                    >
+                                      {search
+                                        ? `No re-enrollment records matching "${search}"`
+                                        : 'No re-enrollment data available'}
+                                    </td>
+                                  </tr>
+                                );
                               return rows.map((c, i) => (
-                                <tr key={c.id || i} className="hover:bg-cyan-50/20 transition-colors group">
-                                  <td className="sticky left-0 bg-white group-hover:bg-cyan-50/20 px-3 py-2.5 text-[10px] font-bold text-slate-400 z-10">{i + 1}</td>
+                                <tr
+                                  key={c.id || i}
+                                  className="hover:bg-cyan-50/20 transition-colors group"
+                                >
+                                  <td className="sticky left-0 bg-white group-hover:bg-cyan-50/20 px-3 py-2.5 text-[10px] font-bold text-slate-400 z-10">
+                                    {i + 1}
+                                  </td>
                                   <td className="sticky left-8 bg-white group-hover:bg-cyan-50/20 px-3 py-2.5 z-10 min-w-[160px]">
                                     <div className="flex items-center gap-2">
                                       <div className="w-6 h-6 rounded-md bg-cyan-100 text-cyan-600 flex items-center justify-center text-[9px] font-black flex-shrink-0">
-                                        {(c.customerName || "?").charAt(0).toUpperCase()}
+                                        {(c.customerName || '?').charAt(0).toUpperCase()}
                                       </div>
-                                      <span className="text-[11px] font-black text-slate-800">{c.customerName || "—"}</span>
+                                      <span className="text-[11px] font-black text-slate-800">
+                                        {c.customerName || '—'}
+                                      </span>
                                     </div>
                                   </td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">{c.profileNo || "—"}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-500 whitespace-nowrap">{c.orderNo || "—"}</td>
-                                  <td className="px-3 py-2.5">
-                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wide whitespace-nowrap">{c.schemeType || "—"}</span>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">
+                                    {c.profileNo || '—'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                                    {c.orderNo || '—'}
                                   </td>
                                   <td className="px-3 py-2.5">
-                                    <span className={cn("px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide whitespace-nowrap",
-                                      c.schemeStatus?.toLowerCase().includes("active") ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-                                    )}>{c.schemeStatus || "—"}</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wide whitespace-nowrap">
+                                      {c.schemeType || '—'}
+                                    </span>
                                   </td>
-                                  <td className="px-3 py-2.5 text-[11px] font-black text-slate-800 text-right whitespace-nowrap">{formatNumber(c.reEnrolmentCount || 0)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-black text-emerald-700 text-right whitespace-nowrap">{formatCurrency(c.reEnrolmentValue || 0)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">{formatCurrency(c.installmentAmount || 0)}</td>
-                                  <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">{c.location || "—"}</td>
+                                  <td className="px-3 py-2.5">
+                                    <span
+                                      className={cn(
+                                        'px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide whitespace-nowrap',
+                                        c.schemeStatus?.toLowerCase().includes('active')
+                                          ? 'bg-emerald-50 text-emerald-700'
+                                          : 'bg-slate-100 text-slate-500',
+                                      )}
+                                    >
+                                      {c.schemeStatus || '—'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-black text-slate-800 text-right whitespace-nowrap">
+                                    {formatNumber(c.reEnrolmentCount || 0)}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-black text-emerald-700 text-right whitespace-nowrap">
+                                    {formatCurrency(c.reEnrolmentValue || 0)}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600 text-right whitespace-nowrap">
+                                    {formatCurrency(c.installmentAmount || 0)}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">
+                                    {c.location || '—'}
+                                  </td>
                                 </tr>
                               ));
                             })()}
@@ -838,13 +1354,14 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         </table>
                       </div>
                       <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        Showing {filterCustomers(reEnrolmentCustomers).length} of {reEnrolmentCustomers.length} re-enrollment records
+                        Showing {filterCustomers(reEnrolmentCustomers).length} of{' '}
+                        {reEnrolmentCustomers.length} re-enrollment records
                       </div>
                     </div>
                   </motion.div>
                 )}
 
-                {activeTab === "master" && (
+                {activeTab === 'master' && (
                   <motion.div
                     key="master"
                     initial={{ opacity: 0, y: 10 }}
@@ -872,31 +1389,79 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                         placeholder="Search across all fields..."
                         className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all"
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={(e) => setSearch(e.target.value)}
                       />
                     </div>
 
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse" style={{ minWidth: '4500px' }}>
+                        <table
+                          className="w-full text-left border-collapse"
+                          style={{ minWidth: '4500px' }}
+                        >
                           <thead>
                             <tr className="bg-slate-50/50">
-                              <th className="sticky left-0 bg-slate-50 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 z-20">#</th>
-                              <th className="sticky left-12 bg-slate-50 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 z-20 min-w-[200px]">Customer Name</th>
+                              <th className="sticky left-0 bg-slate-50 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 z-20">
+                                #
+                              </th>
+                              <th className="sticky left-12 bg-slate-50 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 z-20 min-w-[200px]">
+                                Customer Name
+                              </th>
                               {/* Metadata */}
                               {[
-                                "source", "location", "locationCode", "employeeCode", "employeeName", "profileNo", "orderNo", "schemeType", "schemeStatus", "joiningDate"
-                              ].map(key => (
-                                <th key={key} className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 whitespace-nowrap">{key}</th>
+                                'source',
+                                'location',
+                                'locationCode',
+                                'employeeCode',
+                                'employeeName',
+                                'profileNo',
+                                'orderNo',
+                                'schemeType',
+                                'schemeStatus',
+                                'joiningDate',
+                              ].map((key) => (
+                                <th
+                                  key={key}
+                                  className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 whitespace-nowrap"
+                                >
+                                  {key}
+                                </th>
                               ))}
                               {/* Numeric values */}
                               {[
-                                "installmentAmount", "expectedInstAmount", "currentReceivedAmount", "totalDue", "paidCustomerCount", "collectionReceivedValue", "collectionPercent",
-                                "paymentAgainstOverdueValue", "currentDueCollectionValue", "schemeDiscount", "enrolmentCount", "enrolmentValue", "overdueCount", "overdueValue",
-                                "odCollectionCount", "odCollectionValue", "currentDueCount", "currentDueValue", "cdCollectionCount", "cdCollectionValue", "forclosedCount",
-                                "forclosedValue", "redemptionActual", "redemptionPending", "reEnrolmentCount", "reEnrolmentValue", "upSaleCount", "upSaleValue"
-                              ].map(key => (
-                                <th key={key} className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-emerald-600 border-b border-slate-100 whitespace-nowrap text-right bg-emerald-50/10">
+                                'installmentAmount',
+                                'expectedInstAmount',
+                                'currentReceivedAmount',
+                                'totalDue',
+                                'paidCustomerCount',
+                                'collectionReceivedValue',
+                                'collectionPercent',
+                                'paymentAgainstOverdueValue',
+                                'currentDueCollectionValue',
+                                'schemeDiscount',
+                                'enrolmentCount',
+                                'enrolmentValue',
+                                'overdueCount',
+                                'overdueValue',
+                                'odCollectionCount',
+                                'odCollectionValue',
+                                'currentDueCount',
+                                'currentDueValue',
+                                'cdCollectionCount',
+                                'cdCollectionValue',
+                                'forclosedCount',
+                                'forclosedValue',
+                                'redemptionActual',
+                                'redemptionPending',
+                                'reEnrolmentCount',
+                                'reEnrolmentValue',
+                                'upSaleCount',
+                                'upSaleValue',
+                              ].map((key) => (
+                                <th
+                                  key={key}
+                                  className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-emerald-600 border-b border-slate-100 whitespace-nowrap text-right bg-emerald-50/10"
+                                >
                                   {key.replace(/([A-Z])/g, ' $1').trim()}
                                 </th>
                               ))}
@@ -904,30 +1469,86 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {sortCustomers(filterCustomers(customers)).map((c, i) => (
-                              <tr key={c.id || i} className="hover:bg-slate-50/80 transition-colors group">
-                                <td className="sticky left-0 bg-white group-hover:bg-slate-50 px-4 py-3.5 text-[11px] font-black text-slate-400 border-r border-slate-50 z-10">{i + 1}</td>
+                              <tr
+                                key={c.id || i}
+                                className="hover:bg-slate-50/80 transition-colors group"
+                              >
+                                <td className="sticky left-0 bg-white group-hover:bg-slate-50 px-4 py-3.5 text-[11px] font-black text-slate-400 border-r border-slate-50 z-10">
+                                  {i + 1}
+                                </td>
                                 <td className="sticky left-12 bg-white group-hover:bg-slate-50 px-4 py-3.5 border-r border-slate-50 z-10 min-w-[200px]">
-                                  <span className="text-[12px] font-black text-slate-900 truncate block">{c.customerName || "—"}</span>
+                                  <span className="text-[12px] font-black text-slate-900 truncate block">
+                                    {c.customerName || '—'}
+                                  </span>
                                 </td>
                                 {/* Metadata Cells */}
                                 {[
-                                  "source", "location", "locationCode", "employeeCode", "employeeName", "profileNo", "orderNo", "schemeType", "schemeStatus", "joiningDate"
-                                ].map(key => (
-                                  <td key={key} className="px-4 py-3.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">{(c as any)[key] || "—"}</td>
+                                  'source',
+                                  'location',
+                                  'locationCode',
+                                  'employeeCode',
+                                  'employeeName',
+                                  'profileNo',
+                                  'orderNo',
+                                  'schemeType',
+                                  'schemeStatus',
+                                  'joiningDate',
+                                ].map((key) => (
+                                  <td
+                                    key={key}
+                                    className="px-4 py-3.5 text-[11px] font-bold text-slate-600 whitespace-nowrap"
+                                  >
+                                    {(c as any)[key] || '—'}
+                                  </td>
                                 ))}
                                 {/* Numeric Cells */}
                                 {[
-                                  "installmentAmount", "expectedInstAmount", "currentReceivedAmount", "totalDue", "paidCustomerCount", "collectionReceivedValue", "collectionPercent",
-                                  "paymentAgainstOverdueValue", "currentDueCollectionValue", "schemeDiscount", "enrolmentCount", "enrolmentValue", "overdueCount", "overdueValue",
-                                  "odCollectionCount", "odCollectionValue", "currentDueCount", "currentDueValue", "cdCollectionCount", "cdCollectionValue", "forclosedCount",
-                                  "forclosedValue", "redemptionActual", "redemptionPending", "reEnrolmentCount", "reEnrolmentValue", "upSaleCount", "upSaleValue"
-                                ].map(key => {
+                                  'installmentAmount',
+                                  'expectedInstAmount',
+                                  'currentReceivedAmount',
+                                  'totalDue',
+                                  'paidCustomerCount',
+                                  'collectionReceivedValue',
+                                  'collectionPercent',
+                                  'paymentAgainstOverdueValue',
+                                  'currentDueCollectionValue',
+                                  'schemeDiscount',
+                                  'enrolmentCount',
+                                  'enrolmentValue',
+                                  'overdueCount',
+                                  'overdueValue',
+                                  'odCollectionCount',
+                                  'odCollectionValue',
+                                  'currentDueCount',
+                                  'currentDueValue',
+                                  'cdCollectionCount',
+                                  'cdCollectionValue',
+                                  'forclosedCount',
+                                  'forclosedValue',
+                                  'redemptionActual',
+                                  'redemptionPending',
+                                  'reEnrolmentCount',
+                                  'reEnrolmentValue',
+                                  'upSaleCount',
+                                  'upSaleValue',
+                                ].map((key) => {
                                   const val = (c as any)[key] || 0;
-                                  const isMoney = key.toLowerCase().includes('value') || key.toLowerCase().includes('amount') || key.toLowerCase().includes('discount') || key.toLowerCase().includes('redemption');
+                                  const isMoney =
+                                    key.toLowerCase().includes('value') ||
+                                    key.toLowerCase().includes('amount') ||
+                                    key.toLowerCase().includes('discount') ||
+                                    key.toLowerCase().includes('redemption');
                                   const isPercent = key.toLowerCase().includes('percent');
                                   return (
-                                    <td key={key} className="px-4 py-3.5 text-[11px] font-black text-right whitespace-nowrap tabular-nums border-l border-slate-50/50">
-                                      {isPercent ? `${val.toFixed(1)}%` : isMoney ? formatCurrency(val) : formatNumber(val)}
+                                    <td
+                                      key={key}
+                                      className="px-4 py-3.5 text-[11px] font-black text-right whitespace-nowrap tabular-nums border-l border-slate-50/50"
+                                    >
+                                      {isPercent
+                                        ? `${val.toFixed(1)}%`
+                                        : isMoney
+                                          ? formatCurrency(val)
+                                          : formatNumber(val)}
                                     </td>
                                   );
                                 })}
@@ -938,7 +1559,8 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
                       </div>
                       <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          Showing {filterCustomers(customers).length} of {customers.length} records • analytical Sheet Active
+                          Showing {filterCustomers(customers).length} of {customers.length} records
+                          • analytical Sheet Active
                         </span>
                         <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
                           Total Analytical Matrix Size: {customers.length} x 41
@@ -956,7 +1578,19 @@ export function DetailDashboard({ isOpen, onClose, data }: DetailDashboardProps)
   );
 }
 
-function SortTh({ label, k, sortKey, onClick, dir }: { label: string; k: string; sortKey: string; onClick: () => void; dir: SortDir }) {
+function SortTh({
+  label,
+  k,
+  sortKey,
+  onClick,
+  dir,
+}: {
+  label: string;
+  k: string;
+  sortKey: string;
+  onClick: () => void;
+  dir: SortDir;
+}) {
   const active = sortKey === k;
   return (
     <th
@@ -964,9 +1598,15 @@ function SortTh({ label, k, sortKey, onClick, dir }: { label: string; k: string;
       onClick={onClick}
     >
       {label}
-      {active
-        ? (dir === "asc" ? <ChevronUp className="w-3 h-3 inline ml-0.5 text-blue-500" /> : <ChevronDown className="w-3 h-3 inline ml-0.5 text-blue-500" />)
-        : <span className="inline-block w-3 ml-0.5" />}
+      {active ? (
+        dir === 'asc' ? (
+          <ChevronUp className="w-3 h-3 inline ml-0.5 text-blue-500" />
+        ) : (
+          <ChevronDown className="w-3 h-3 inline ml-0.5 text-blue-500" />
+        )
+      ) : (
+        <span className="inline-block w-3 ml-0.5" />
+      )}
     </th>
   );
 }

@@ -37,8 +37,12 @@ export function LoginPage() {
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200 mb-4 sm:mb-6">
                 <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8" />
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Welcome Back</h2>
-              <p className="text-sm sm:text-base text-slate-500 font-medium mt-2">Sign in to access your dashboard</p>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Welcome Back
+              </h2>
+              <p className="text-sm sm:text-base text-slate-500 font-medium mt-2">
+                Sign in to access your dashboard
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -54,7 +58,9 @@ export function LoginPage() {
               )}
 
               <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Email Address
+                </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
@@ -71,7 +77,9 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Password
+                </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
@@ -103,18 +111,16 @@ export function LoginPage() {
               </button>
             </form>
           </div>
-          
+
           <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               Secure Access • Enterprise Dashboard
             </p>
           </div>
         </div>
-        
+
         <div className="mt-8 text-center">
-          <p className="text-sm text-slate-400 font-medium">
-            Admin: admin@example.com / admin123
-          </p>
+          <p className="text-sm text-slate-400 font-medium">Admin: admin@example.com / admin123</p>
         </div>
       </motion.div>
     </div>

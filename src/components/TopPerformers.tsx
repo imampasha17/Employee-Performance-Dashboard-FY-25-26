@@ -1,7 +1,7 @@
-import React from "react";
-import { Trophy, User, ArrowRight } from "lucide-react";
-import { formatNumber } from "../lib/utils";
-import { motion } from "motion/react";
+import React from 'react';
+import { Trophy, User, ArrowRight } from 'lucide-react';
+import { formatNumber } from '../lib/utils';
+import { motion } from 'motion/react';
 
 interface EmployeeStat {
   employeeCode: string;
@@ -16,15 +16,13 @@ interface TopPerformersProps {
 }
 
 export function TopPerformers({ data }: TopPerformersProps) {
-  const top10 = [...data]
-    .sort((a, b) => (b.totalCount || 0) - (a.totalCount || 0))
-    .slice(0, 10);
+  const top10 = [...data].sort((a, b) => (b.totalCount || 0) - (a.totalCount || 0)).slice(0, 10);
 
   return (
     <div className="bg-slate-900 rounded-[2rem] p-6 md:p-8 text-white shadow-2xl shadow-blue-900/30 overflow-hidden relative">
       <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full -mr-32 -mt-32 blur-[80px]" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/10 rounded-full -ml-32 -mb-32 blur-[80px]" />
-      
+
       <div className="relative z-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div>
@@ -62,7 +60,7 @@ export function TopPerformers({ data }: TopPerformersProps) {
                   {employee.location}
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="font-bold text-sm truncate group-hover:text-blue-400 transition-colors duration-300">
                   {employee.employeeName}
@@ -76,9 +74,9 @@ export function TopPerformers({ data }: TopPerformersProps) {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
+                <motion.div
                   initial={{ width: 0 }}
                   whileInView={{ width: `${(employee.totalCount / top10[0].totalCount) * 100}%` }}
                   viewport={{ once: true }}

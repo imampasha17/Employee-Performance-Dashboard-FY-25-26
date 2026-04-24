@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { Dashboard } from "./components/Dashboard";
-import { LoginPage } from "./components/auth/LoginPage";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
-import { ProcessedData } from "./types";
-import { parseCSVFiles } from "./services/dataService";
-import { motion, AnimatePresence } from "motion/react";
+import React, { useState, useEffect } from 'react';
+import { Dashboard } from './components/Dashboard';
+import { LoginPage } from './components/auth/LoginPage';
+import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ProcessedData } from './types';
+import { parseCSVFiles } from './services/dataService';
+import { motion, AnimatePresence } from 'motion/react';
 
 function AppContent() {
   const { isAuthenticated, loading, user, logout, token } = useAuth();
@@ -19,19 +19,19 @@ function AppContent() {
     try {
       // Add cache-buster to ensure we get fresh data every time
       const res = await fetch(`/api/data?t=${Date.now()}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const json = await res.json();
         if (json && Array.isArray(json.data)) {
           setData(json.data);
         } else {
-          console.warn("Received non-array data from API:", json);
+          console.warn('Received non-array data from API:', json);
           setData([]);
         }
       }
     } catch (err) {
-      console.error("Failed to fetch data", err);
+      console.error('Failed to fetch data', err);
     } finally {
       setIsInitialLoading(false);
     }
@@ -45,11 +45,11 @@ function AppContent() {
     }
   }, [isAuthenticated, token]);
 
-  const handleFileUpload = async (files: { content: string, name: string }[]) => {
+  const handleFileUpload = async (files: { content: string; name: string }[]) => {
     try {
       const processed = parseCSVFiles(files);
       if (processed.length === 0) {
-        setError("No valid data found in the file. Please check the format.");
+        setError('No valid data found in the file. Please check the format.');
         return;
       }
 
@@ -60,33 +60,33 @@ function AppContent() {
       // 2. Background Upload to Supabase (Chunked to bypass Vercel 4.5MB limit)
       if (user?.role === 'admin') {
         setIsUploading(true);
-        setUploadStatus("Starting background upload...");
-        
+        setUploadStatus('Starting background upload...');
+
         try {
           // A. Clear table first
           const startRes = await fetch('/api/upload/start', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
-          if (!startRes.ok) throw new Error("Failed to initialize upload");
+          if (!startRes.ok) throw new Error('Failed to initialize upload');
 
           // B. Upload in chunks of 1,000 rows
           const CHUNK_SIZE = 1000;
           const totalChunks = Math.ceil(processed.length / CHUNK_SIZE);
-          
+
           for (let i = 0; i < processed.length; i += CHUNK_SIZE) {
             const chunk = processed.slice(i, i + CHUNK_SIZE);
             const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
-            
+
             setUploadStatus(`Saving to database... Part ${chunkNum} of ${totalChunks}`);
-            
+
             const chunkRes = await fetch('/api/upload/chunk', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                Authorization: `Bearer ${token}`,
               },
-              body: JSON.stringify({ data: chunk })
+              body: JSON.stringify({ data: chunk }),
             });
 
             if (!chunkRes.ok) {
@@ -95,34 +95,34 @@ function AppContent() {
             }
           }
 
-          setUploadStatus("All data saved to cloud!");
+          setUploadStatus('All data saved to cloud!');
           // Final sync with database to ensure everything is matched correctly
           await fetchData();
-          
+
           setTimeout(() => {
             setIsUploading(false);
             setUploadStatus(null);
           }, 3000);
         } catch (uploadErr: any) {
-          console.error("Background upload failed:", uploadErr);
+          console.error('Background upload failed:', uploadErr);
           setError(`Cloud Sync Failed: ${uploadErr.message}. Data is only visible locally.`);
           setIsUploading(false);
           setUploadStatus(null);
         }
       }
     } catch (err) {
-      setError("Error parsing the file.");
+      setError('Error parsing the file.');
     }
   };
 
   const handleClearData = async () => {
     if (user?.role !== 'admin') return;
-    if (!window.confirm("Are you sure you want to clear all data? This cannot be undone.")) return;
-    
+    if (!window.confirm('Are you sure you want to clear all data? This cannot be undone.')) return;
+
     try {
       const res = await fetch('/api/data', {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         setData([]);
@@ -132,7 +132,7 @@ function AppContent() {
         setError(`Failed to clear data: ${errData.error || errData.message || 'Unknown error'}`);
       }
     } catch (err) {
-      setError("Network error: failed to clear data.");
+      setError('Network error: failed to clear data.');
     }
   };
 
@@ -162,11 +162,11 @@ function AppContent() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <Dashboard 
-            data={data} 
-            onFileUpload={handleFileUpload} 
+          <Dashboard
+            data={data}
+            onFileUpload={handleFileUpload}
             onClearData={handleClearData}
-            user={user!} 
+            user={user!}
             onLogout={logout}
             onRefresh={fetchData}
             error={error}
