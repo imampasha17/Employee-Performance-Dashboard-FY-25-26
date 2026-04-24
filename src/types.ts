@@ -1,6 +1,6 @@
 export interface ProcessedData {
   id?: string;
-  source?: 'enrollment' | 'dueCollection' | 'legacy';
+  source?: 'enrollment' | 'dueCollection' | 'legacy' | 're-enrollment' | 'upsale';
   locationCode?: string;
   location: string;
   employeeCode: string;
