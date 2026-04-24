@@ -219,7 +219,36 @@ export function parseCSV(csvContent: string, fileName?: string): ProcessedData[]
 
 
 export function parseCSVFiles(files: { content: string, name: string }[]): ProcessedData[] {
-  return files.reduce((acc, file) => acc.concat(parseCSV(file.content, file.name)), [] as ProcessedData[]);
+  const allData = files.reduce((acc, file) => acc.concat(parseCSV(file.content, file.name)), [] as ProcessedData[]);
+  
+  // Create a lookup map for Employee -> Location Data
+  const empLocationMap = new Map<string, { location: string, locationCode: string }>();
+  allData.forEach(row => {
+    if (row.location && row.location !== "Staff Report" && row.location.toLowerCase() !== "unknown") {
+      const locData = { location: row.location, locationCode: row.locationCode || "" };
+      if (row.employeeCode) empLocationMap.set(row.employeeCode, locData);
+      if (row.employeeName) empLocationMap.set(row.employeeName.toLowerCase(), locData);
+    }
+  });
+
+  // Second pass to update missing locations (e.g., from Staff Reports)
+  allData.forEach(row => {
+    if (row.location === "Staff Report" || !row.location || row.location.toLowerCase() === "unknown") {
+      let match = null;
+      if (row.employeeCode && empLocationMap.has(row.employeeCode)) {
+        match = empLocationMap.get(row.employeeCode);
+      } else if (row.employeeName && empLocationMap.has(row.employeeName.toLowerCase())) {
+        match = empLocationMap.get(row.employeeName.toLowerCase());
+      }
+      
+      if (match) {
+        row.location = match.location;
+        if (!row.locationCode) row.locationCode = match.locationCode;
+      }
+    }
+  });
+
+  return allData;
 }
 
 export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {

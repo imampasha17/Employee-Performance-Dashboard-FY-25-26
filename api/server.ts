@@ -313,7 +313,7 @@ export async function createServer() {
       // Filter by location if not admin
       if (req.user.role !== "admin" && req.user.accessibleLocations?.length > 0) {
         const allowed = req.user.accessibleLocations.map((l: string) => l.toLowerCase().trim());
-        processedData = data.filter(row => 
+        processedData = allData.filter((row: any) => 
           allowed.includes((row.location || "").toLowerCase().trim())
         );
       }
