@@ -323,6 +323,12 @@ export function Dashboard({
       totalCollection: loc.totalCollection,
       totalRedemption: locData.reduce((sum, d) => sum + (d.redemptionActual || 0), 0),
       employeeCount: loc.employeeCount,
+      foreclosedCount: loc.totalForclosed,
+      totalForclosedValue: loc.forclosedValue,
+      totalReEnrolmentCount: loc.reEnrolmentCount,
+      totalReEnrolmentValue: loc.reEnrolmentValue,
+      totalUpSaleCount: loc.upSaleCount,
+      totalUpSaleValue: loc.upSaleValue,
       customers: locData,
       totalDueCount: new Set(
         locData

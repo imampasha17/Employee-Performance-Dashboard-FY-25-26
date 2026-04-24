@@ -474,8 +474,9 @@ export function getStatsByLocation(data: ProcessedData[]): LocationStats[] {
     stats.totalForclosed += item.forclosedCount || 0;
     stats.forclosedValue += item.forclosedValue || 0;
     stats.reEnrolmentCount += item.reEnrolmentCount || 0;
+    stats.reEnrolmentValue += item.reEnrolmentValue || 0;
     stats.upSaleCount += item.upSaleCount || 0;
-    stats.overdueValue += item.overdueValue || 0;
+    stats.upSaleValue += item.upSaleValue || 0;
     stats.currentDueValue += item.currentDueValue || 0;
     stats.paymentAgainstOverdueValue += item.paymentAgainstOverdueValue || 0;
     stats.currentDueCollectionValue += item.currentDueCollectionValue || 0;
@@ -565,6 +566,7 @@ export function getStatsByEmployee(data: ProcessedData[]): EmployeeStat[] {
     stats.totalCollection =
       (stats.totalCollection || 0) + (item.odCollectionCount || item.cdCollectionCount || 0);
     stats.totalForclosed = (stats.totalForclosed || 0) + (item.forclosedCount || 0);
+    stats.forclosedValue = (stats.forclosedValue || 0) + (item.forclosedValue || 0);
     stats.totalDue = (stats.totalDue || 0) + (item.totalDue || 0);
     stats.reEnrolmentCount = (stats.reEnrolmentCount || 0) + (item.reEnrolmentCount || 0);
     stats.reEnrolmentValue = (stats.reEnrolmentValue || 0) + (item.reEnrolmentValue || 0);
